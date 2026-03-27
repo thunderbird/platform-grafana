@@ -307,7 +307,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (service) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\"}[$__rate_interval]))",
+          "expr": "sum by (service) (rate(traefik_service_requests_total{service=~\"$service\"}[$__rate_interval]))",
           "legendFormat": "{{ service }}",
           "refId": "A"
         }
@@ -474,25 +474,25 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"2..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{service=~\"$service\", code=~\"2..\"}[$__rate_interval]))",
           "legendFormat": "2xx",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"3..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{service=~\"$service\", code=~\"3..\"}[$__rate_interval]))",
           "legendFormat": "3xx",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"4..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{service=~\"$service\", code=~\"4..\"}[$__rate_interval]))",
           "legendFormat": "4xx",
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"5..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{service=~\"$service\", code=~\"5..\"}[$__rate_interval]))",
           "legendFormat": "5xx",
           "refId": "D"
         }
@@ -619,19 +619,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.50, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])))",
           "legendFormat": "{{ service }} p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])))",
           "legendFormat": "{{ service }} p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[$__rate_interval])))",
           "legendFormat": "{{ service }} p99",
           "refId": "C"
         }

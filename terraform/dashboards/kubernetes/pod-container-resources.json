@@ -51,10 +51,15 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "description": "Total container restart count for the selected pod",
+      "description": "Total container restart count for the selected pods",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -65,32 +70,47 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "gauge" } },
+              { "id": "displayName", "value": "Restarts" },
+              { "id": "max", "value": 50 }
+            ]
+          }
+        ]
       },
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 1 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 1 },
       "id": 1,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
+        "cellHeight": "sm",
+        "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Restarts" }]
       },
-      "title": "Container Restarts",
-      "type": "stat",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (container) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\",pod=~\"$pod\"})",
-          "legendFormat": "{{container}}",
+          "expr": "sum by (pod, container) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\",pod=~\"$pod\"})",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
           "refId": "A"
         }
-      ]
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": { "pod": "Pod", "container": "Container", "Value": "Restarts" },
+            "indexByName": { "pod": 0, "container": 1, "Value": 2 }
+          }
+        }
+      ],
+      "title": "Container Restarts",
+      "type": "table"
     },
     {
       "collapsed": false,

@@ -62,7 +62,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total number of Persistent Volumes",
       "fieldConfig": {
         "defaults": {
@@ -95,7 +95,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "count(kube_persistentvolume_status_phase)",
           "legendFormat": "",
           "refId": "A"
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of PVs in Bound state",
       "fieldConfig": {
         "defaults": {
@@ -136,7 +136,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_persistentvolume_status_phase{phase=\"Bound\"}) OR vector(0)",
           "legendFormat": "",
           "refId": "A"
@@ -144,7 +144,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of PVs in Available (unbound) state",
       "fieldConfig": {
         "defaults": {
@@ -177,7 +177,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_persistentvolume_status_phase{phase=\"Available\"}) OR vector(0)",
           "legendFormat": "",
           "refId": "A"
@@ -185,7 +185,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of PVs in Released or Failed state",
       "fieldConfig": {
         "defaults": {
@@ -219,7 +219,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_persistentvolume_status_phase{phase=~\"Released|Failed\"}) OR vector(0)",
           "legendFormat": "",
           "refId": "A"
@@ -234,7 +234,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Persistent Volume status phase distribution",
       "fieldConfig": {
         "defaults": {
@@ -280,7 +280,7 @@
       "type": "piechart",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (phase) (kube_persistentvolume_status_phase)",
           "legendFormat": "{{phase}}",
           "refId": "A"
@@ -288,7 +288,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "PV phase counts over time",
       "fieldConfig": {
         "defaults": {
@@ -320,7 +320,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (phase) (kube_persistentvolume_status_phase)",
           "legendFormat": "{{phase}}",
           "refId": "A"
@@ -335,7 +335,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "PVC usage details showing capacity, used space, available space, and utilization percentage",
       "fieldConfig": {
         "defaults": {
@@ -430,7 +430,7 @@
       "type": "table",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "kubelet_volume_stats_capacity_bytes",
           "format": "table",
           "instant": true,
@@ -438,7 +438,7 @@
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "kubelet_volume_stats_used_bytes",
           "format": "table",
           "instant": true,
@@ -446,7 +446,7 @@
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "kubelet_volume_stats_available_bytes",
           "format": "table",
           "instant": true,
@@ -454,7 +454,7 @@
           "refId": "C"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "100 * kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes",
           "format": "table",
           "instant": true,
@@ -538,7 +538,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "PVCs that are not in a Bound state. A non-zero value indicates PVCs waiting for a PV.",
       "fieldConfig": {
         "defaults": {
@@ -570,7 +570,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "kube_persistentvolumeclaim_info * on (persistentvolumeclaim, namespace) group_left kube_persistentvolumeclaim_status_phase{phase!=\"Bound\"}",
           "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}",
           "refId": "A"

@@ -62,7 +62,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total number of nodes in the cluster",
       "fieldConfig": {
         "defaults": {
@@ -96,7 +96,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "count(kube_node_info)",
           "legendFormat": "",
           "refId": "A"
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total number of pods across all namespaces",
       "fieldConfig": {
         "defaults": {
@@ -137,7 +137,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_pod_status_phase{phase=\"Running\"})",
           "legendFormat": "",
           "refId": "A"
@@ -145,7 +145,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Overall cluster CPU utilization percentage",
       "fieldConfig": {
         "defaults": {
@@ -183,7 +183,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
           "legendFormat": "",
           "refId": "A"
@@ -191,7 +191,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Overall cluster memory utilization percentage",
       "fieldConfig": {
         "defaults": {
@@ -229,7 +229,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)",
           "legendFormat": "",
           "refId": "A"
@@ -237,7 +237,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of nodes in Ready condition",
       "fieldConfig": {
         "defaults": {
@@ -271,7 +271,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})",
           "legendFormat": "",
           "refId": "A"
@@ -279,7 +279,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of nodes in NotReady condition",
       "fieldConfig": {
         "defaults": {
@@ -313,7 +313,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"false\"}) OR vector(0)",
           "legendFormat": "",
           "refId": "A"
@@ -328,7 +328,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Breakdown of pod phases across the cluster",
       "fieldConfig": {
         "defaults": {
@@ -370,7 +370,7 @@
       "type": "piechart",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (phase) (kube_pod_status_phase)",
           "legendFormat": "{{phase}}",
           "refId": "A"
@@ -378,7 +378,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Node readiness status over time",
       "fieldConfig": {
         "defaults": {
@@ -410,13 +410,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})",
           "legendFormat": "Ready",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"false\"})",
           "legendFormat": "NotReady",
           "refId": "B"
@@ -431,7 +431,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Top 10 pods by CPU usage",
       "fieldConfig": {
         "defaults": {
@@ -464,7 +464,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "topk(10, sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[5m])))",
           "legendFormat": "{{namespace}}/{{pod}}",
           "refId": "A"
@@ -472,7 +472,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Top 10 pods by memory usage",
       "fieldConfig": {
         "defaults": {
@@ -505,7 +505,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "topk(10, sum by (namespace, pod) (container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}))",
           "legendFormat": "{{namespace}}/{{pod}}",
           "refId": "A"

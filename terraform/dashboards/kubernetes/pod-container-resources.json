@@ -50,7 +50,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total container restart count for the selected pod",
       "fieldConfig": {
         "defaults": {
@@ -85,7 +85,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (container) (kube_pod_container_status_restarts_total{namespace=~\"$namespace\",pod=~\"$pod\"})",
           "legendFormat": "{{container}}",
           "refId": "A"
@@ -100,7 +100,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "CPU usage rate per container in the selected pod",
       "fieldConfig": {
         "defaults": {
@@ -133,7 +133,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"$namespace\",pod=~\"$pod\"}[5m]))",
           "legendFormat": "{{container}}",
           "refId": "A"
@@ -141,7 +141,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Memory working set per container in the selected pod",
       "fieldConfig": {
         "defaults": {
@@ -174,7 +174,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (container) (container_memory_working_set_bytes{container!=\"\",container!=\"POD\",namespace=~\"$namespace\",pod=~\"$pod\"})",
           "legendFormat": "{{container}}",
           "refId": "A"
@@ -189,7 +189,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Network bytes received per pod",
       "fieldConfig": {
         "defaults": {
@@ -222,7 +222,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\"}[5m]))",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -230,7 +230,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Network bytes transmitted per pod",
       "fieldConfig": {
         "defaults": {
@@ -263,7 +263,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (pod) (rate(container_network_transmit_bytes_total{namespace=~\"$namespace\",pod=~\"$pod\"}[5m]))",
           "legendFormat": "{{pod}}",
           "refId": "A"
@@ -278,7 +278,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Filesystem read rate per container",
       "fieldConfig": {
         "defaults": {
@@ -311,7 +311,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (container) (rate(container_fs_reads_bytes_total{container!=\"\",container!=\"POD\",namespace=~\"$namespace\",pod=~\"$pod\"}[5m]))",
           "legendFormat": "{{container}}",
           "refId": "A"
@@ -319,7 +319,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Filesystem write rate per container",
       "fieldConfig": {
         "defaults": {
@@ -352,7 +352,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (container) (rate(container_fs_writes_bytes_total{container!=\"\",container!=\"POD\",namespace=~\"$namespace\",pod=~\"$pod\"}[5m]))",
           "legendFormat": "{{container}}",
           "refId": "A"
@@ -368,7 +368,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
         "definition": "label_values(kube_pod_info,namespace)",
         "hide": 0,
         "includeAll": true,
@@ -390,7 +390,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
         "definition": "label_values(kube_pod_info{namespace=~\"$namespace\"},pod)",
         "hide": 0,
         "includeAll": true,

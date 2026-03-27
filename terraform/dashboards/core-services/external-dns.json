@@ -29,7 +29,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -56,7 +56,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "external_dns_controller_verified_a_records",
           "legendFormat": "",
           "refId": "A"
@@ -66,7 +66,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -93,7 +93,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "external_dns_controller_verified_cname_records",
           "legendFormat": "",
           "refId": "A"
@@ -103,7 +103,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -130,7 +130,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "external_dns_registry_endpoints_total",
           "legendFormat": "",
           "refId": "A"
@@ -140,7 +140,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -167,7 +167,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "external_dns_controller_last_sync_timestamp * 1000",
           "legendFormat": "",
           "refId": "A"
@@ -185,7 +185,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -229,13 +229,13 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(external_dns_source_errors_total[5m])",
           "legendFormat": "Source Errors",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(external_dns_registry_errors_total[5m])",
           "legendFormat": "Registry Errors",
           "refId": "B"
@@ -245,7 +245,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -288,7 +288,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (type) (rate(external_dns_registry_endpoints_total[5m]))",
           "legendFormat": "{{ type }}",
           "refId": "A"

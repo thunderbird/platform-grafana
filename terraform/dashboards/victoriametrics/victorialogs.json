@@ -25,7 +25,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Current rate of log rows being ingested per second.",
       "fieldConfig": {
         "defaults": {
@@ -56,7 +56,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vl_rows_ingested_total[$__rate_interval]))",
           "legendFormat": "rows/sec",
           "refId": "A"
@@ -64,7 +64,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Current rate of log bytes being ingested per second.",
       "fieldConfig": {
         "defaults": {
@@ -95,7 +95,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vl_bytes_ingested_total[$__rate_interval]))",
           "legendFormat": "bytes/sec",
           "refId": "A"
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total storage space used by VictoriaLogs.",
       "fieldConfig": {
         "defaults": {
@@ -134,7 +134,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vl_data_size_bytes)",
           "legendFormat": "Storage",
           "refId": "A"
@@ -142,7 +142,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of active log streams currently tracked by VictoriaLogs.",
       "fieldConfig": {
         "defaults": {
@@ -173,7 +173,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vl_active_streams)",
           "legendFormat": "Active Streams",
           "refId": "A"
@@ -188,7 +188,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of log rows ingested over time.",
       "fieldConfig": {
         "defaults": {
@@ -228,7 +228,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vl_rows_ingested_total[$__rate_interval])) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -236,7 +236,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of log bytes ingested over time.",
       "fieldConfig": {
         "defaults": {
@@ -276,7 +276,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vl_bytes_ingested_total[$__rate_interval])) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -284,7 +284,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total storage size used by VictoriaLogs over time.",
       "fieldConfig": {
         "defaults": {
@@ -324,7 +324,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vl_data_size_bytes) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -339,7 +339,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of HTTP requests handled by VictoriaLogs, broken down by path.",
       "fieldConfig": {
         "defaults": {
@@ -379,7 +379,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vl_http_requests_total[$__rate_interval])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A"
@@ -387,7 +387,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "HTTP request duration percentiles (p50, p95, p99) for VictoriaLogs.",
       "fieldConfig": {
         "defaults": {
@@ -427,19 +427,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.50, sum(rate(vl_http_request_duration_seconds_bucket[$__rate_interval])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.95, sum(rate(vl_http_request_duration_seconds_bucket[$__rate_interval])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.99, sum(rate(vl_http_request_duration_seconds_bucket[$__rate_interval])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
@@ -454,7 +454,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of HTTP errors returned by VictoriaLogs. Investigate any sustained non-zero values.",
       "fieldConfig": {
         "defaults": {
@@ -494,7 +494,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vl_http_errors_total[$__rate_interval])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A"
@@ -502,7 +502,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of active log streams over time.",
       "fieldConfig": {
         "defaults": {
@@ -542,7 +542,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vl_active_streams) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"

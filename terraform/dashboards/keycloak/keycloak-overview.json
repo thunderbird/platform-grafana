@@ -29,7 +29,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -79,13 +79,13 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(keycloak_logins{realm=\"$realm\"}[5m]))",
           "legendFormat": "Login Success",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(keycloak_login_errors{realm=\"$realm\"}[5m]))",
           "legendFormat": "Login Failures",
           "refId": "B"
@@ -95,7 +95,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -124,7 +124,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(keycloak_active_sessions{realm=\"$realm\"})",
           "legendFormat": "",
           "refId": "A"
@@ -134,7 +134,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -177,7 +177,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(keycloak_registrations{realm=\"$realm\"}[5m]))",
           "legendFormat": "Registrations",
           "refId": "A"
@@ -187,7 +187,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -230,7 +230,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(http_server_requests_seconds_count{uri=~\".*token.*\"}[5m]))",
           "legendFormat": "Token Generation",
           "refId": "A"
@@ -248,7 +248,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -293,19 +293,19 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
@@ -315,7 +315,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -358,7 +358,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (method, status) (rate(http_server_requests_seconds_count[5m]))",
           "legendFormat": "{{ method }} {{ status }}",
           "refId": "A"
@@ -376,7 +376,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -427,13 +427,13 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(jvm_memory_used_bytes{area=\"heap\"})",
           "legendFormat": "Used Heap",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(jvm_memory_max_bytes{area=\"heap\"})",
           "legendFormat": "Max Heap",
           "refId": "B"
@@ -443,7 +443,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -488,7 +488,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(jvm_gc_pause_seconds_sum[5m]) / rate(jvm_gc_pause_seconds_count[5m])",
           "legendFormat": "Avg GC Pause",
           "refId": "A"
@@ -504,7 +504,7 @@
     "list": [
       {
         "current": { "selected": false, "text": "All", "value": "$__all" },
-        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
         "definition": "label_values(keycloak_logins, realm)",
         "hide": 0,
         "includeAll": true,

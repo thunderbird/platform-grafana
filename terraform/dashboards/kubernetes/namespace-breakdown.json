@@ -56,7 +56,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Number of running pods per selected namespace",
       "fieldConfig": {
         "defaults": {
@@ -89,7 +89,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (kube_pod_info{namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -104,7 +104,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "CPU usage rate by namespace over time",
       "fieldConfig": {
         "defaults": {
@@ -137,7 +137,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"$namespace\"}[5m]))",
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -145,7 +145,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Comparison of CPU requests, limits, and actual usage per namespace",
       "fieldConfig": {
         "defaults": {
@@ -189,19 +189,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (kube_pod_container_resource_requests{resource=\"cpu\",namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}} Requests",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (kube_pod_container_resource_limits{resource=\"cpu\",namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}} Limits",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"$namespace\"}[5m]))",
           "legendFormat": "{{namespace}} Actual",
           "refId": "C"
@@ -216,7 +216,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Memory usage by namespace over time",
       "fieldConfig": {
         "defaults": {
@@ -249,7 +249,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\",container!=\"POD\",namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}}",
           "refId": "A"
@@ -257,7 +257,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Comparison of memory requests, limits, and actual usage per namespace",
       "fieldConfig": {
         "defaults": {
@@ -301,19 +301,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (kube_pod_container_resource_requests{resource=\"memory\",namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}} Requests",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (kube_pod_container_resource_limits{resource=\"memory\",namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}} Limits",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\",container!=\"POD\",namespace=~\"$namespace\"})",
           "legendFormat": "{{namespace}} Actual",
           "refId": "C"
@@ -329,7 +329,7 @@
       {
         "allValue": ".*",
         "current": {},
-        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
         "definition": "label_values(kube_namespace_labels,namespace)",
         "hide": 0,
         "includeAll": true,

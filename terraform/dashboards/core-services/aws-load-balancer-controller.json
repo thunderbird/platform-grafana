@@ -29,7 +29,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -72,7 +72,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (controller) (rate(controller_runtime_reconcile_total{controller=~\"ingress|service|targetgroupbinding\"}[5m]))",
           "legendFormat": "{{ controller }}",
           "refId": "A"
@@ -82,7 +82,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -126,7 +126,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (controller) (rate(controller_runtime_reconcile_errors_total{controller=~\"ingress|service|targetgroupbinding\"}[5m]))",
           "legendFormat": "{{ controller }}",
           "refId": "A"
@@ -136,7 +136,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -181,19 +181,19 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.50, sum(rate(controller_runtime_reconcile_time_seconds_bucket{controller=~\"ingress|service|targetgroupbinding\"}[5m])) by (le, controller))",
           "legendFormat": "{{ controller }} p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.95, sum(rate(controller_runtime_reconcile_time_seconds_bucket{controller=~\"ingress|service|targetgroupbinding\"}[5m])) by (le, controller))",
           "legendFormat": "{{ controller }} p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.99, sum(rate(controller_runtime_reconcile_time_seconds_bucket{controller=~\"ingress|service|targetgroupbinding\"}[5m])) by (le, controller))",
           "legendFormat": "{{ controller }} p99",
           "refId": "C"
@@ -211,7 +211,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -254,7 +254,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (service, operation) (rate(aws_api_calls_total[5m]))",
           "legendFormat": "{{ service }}/{{ operation }}",
           "refId": "A"
@@ -264,7 +264,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -309,7 +309,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.95, sum(rate(aws_api_call_duration_seconds_bucket[5m])) by (le, service))",
           "legendFormat": "{{ service }} p95",
           "refId": "A"

@@ -37,7 +37,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -82,25 +82,25 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "teleport_active_sessions_total{type=\"ssh\"}",
           "legendFormat": "SSH Sessions",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "teleport_active_sessions_total{type=\"k8s\"}",
           "legendFormat": "Kubernetes Sessions",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "teleport_active_sessions_total{type=\"db\"}",
           "legendFormat": "Database Sessions",
           "refId": "C"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "teleport_active_sessions_total{type=\"app\"}",
           "legendFormat": "Application Sessions",
           "refId": "D"
@@ -110,7 +110,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -139,7 +139,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(teleport_active_sessions_total)",
           "legendFormat": "",
           "refId": "A"
@@ -149,7 +149,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -178,7 +178,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(teleport_registered_servers)",
           "legendFormat": "",
           "refId": "A"
@@ -188,7 +188,7 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -215,7 +215,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(teleport_connected_resources)",
           "legendFormat": "",
           "refId": "A"
@@ -233,7 +233,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -276,7 +276,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(increase(teleport_connections_total[5m]))",
           "legendFormat": "Total Connections",
           "refId": "A"
@@ -286,7 +286,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -329,7 +329,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (type) (rate(teleport_connections_total[5m]))",
           "legendFormat": "{{ type }}",
           "refId": "A"
@@ -347,7 +347,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -391,7 +391,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum by (success) (rate(teleport_auth_attempts_total{success=\"false\"}[5m]))",
           "legendFormat": "Failed Auth Attempts",
           "refId": "A"
@@ -401,7 +401,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -444,7 +444,7 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(teleport_certificate_mismatch_total[5m])",
           "legendFormat": "Certificate Generation Rate",
           "refId": "A"

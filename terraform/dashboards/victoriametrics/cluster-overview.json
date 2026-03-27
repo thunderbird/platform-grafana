@@ -25,7 +25,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total number of active time series currently tracked by VictoriaMetrics.",
       "fieldConfig": {
         "defaults": {
@@ -56,7 +56,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vm_active_time_series)",
           "legendFormat": "Active Time Series",
           "refId": "A"
@@ -64,7 +64,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of samples being ingested per second across all vminsert instances.",
       "fieldConfig": {
         "defaults": {
@@ -95,7 +95,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vm_rows_inserted_total{job=\"vminsert\"}[$__rate_interval]))",
           "legendFormat": "samples/sec",
           "refId": "A"
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of HTTP query requests handled by vmselect.",
       "fieldConfig": {
         "defaults": {
@@ -134,7 +134,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vm_http_requests_total{job=\"vmselect\"}[$__rate_interval]))",
           "legendFormat": "queries/sec",
           "refId": "A"
@@ -142,7 +142,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total storage space used by vmstorage for time series data.",
       "fieldConfig": {
         "defaults": {
@@ -173,7 +173,7 @@
       "type": "stat",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vm_data_size_bytes{job=\"vmstorage\"})",
           "legendFormat": "Storage",
           "refId": "A"
@@ -188,7 +188,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of rows inserted into VictoriaMetrics over time, broken down by vminsert instance.",
       "fieldConfig": {
         "defaults": {
@@ -228,7 +228,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vm_rows_inserted_total{job=\"vminsert\"}[$__rate_interval])) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -236,7 +236,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of new time series being created. A high churn rate may indicate label cardinality issues.",
       "fieldConfig": {
         "defaults": {
@@ -276,7 +276,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vm_new_time_series_created_total[$__rate_interval]))",
           "legendFormat": "New Series/sec",
           "refId": "A"
@@ -291,7 +291,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Query duration percentiles (p50, p95, p99) for vmselect requests.",
       "fieldConfig": {
         "defaults": {
@@ -331,19 +331,19 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.50, sum(rate(vm_request_duration_seconds_bucket{job=\"vmselect\"}[$__rate_interval])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.95, sum(rate(vm_request_duration_seconds_bucket{job=\"vmselect\"}[$__rate_interval])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "histogram_quantile(0.99, sum(rate(vm_request_duration_seconds_bucket{job=\"vmselect\"}[$__rate_interval])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
@@ -351,7 +351,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Rate of slow queries detected by VictoriaMetrics. Investigate if this value is consistently above zero.",
       "fieldConfig": {
         "defaults": {
@@ -391,7 +391,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(rate(vm_slow_queries_total[$__rate_interval]))",
           "legendFormat": "Slow Queries/sec",
           "refId": "A"
@@ -406,7 +406,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "CPU usage for vminsert instances measured as CPU seconds per second.",
       "fieldConfig": {
         "defaults": {
@@ -446,7 +446,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(process_cpu_seconds_total{job=\"vminsert\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -454,7 +454,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Resident memory usage for vminsert instances.",
       "fieldConfig": {
         "defaults": {
@@ -494,7 +494,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "process_resident_memory_bytes{job=\"vminsert\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -509,7 +509,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "CPU usage for vmselect instances measured as CPU seconds per second.",
       "fieldConfig": {
         "defaults": {
@@ -549,7 +549,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(process_cpu_seconds_total{job=\"vmselect\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -557,7 +557,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Resident memory usage for vmselect instances.",
       "fieldConfig": {
         "defaults": {
@@ -597,7 +597,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "process_resident_memory_bytes{job=\"vmselect\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -612,7 +612,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "CPU usage for vmstorage instances measured as CPU seconds per second.",
       "fieldConfig": {
         "defaults": {
@@ -652,7 +652,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "rate(process_cpu_seconds_total{job=\"vmstorage\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -660,7 +660,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Resident memory usage for vmstorage instances.",
       "fieldConfig": {
         "defaults": {
@@ -700,7 +700,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "process_resident_memory_bytes{job=\"vmstorage\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -708,7 +708,7 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "description": "Total data size stored across all vmstorage nodes over time.",
       "fieldConfig": {
         "defaults": {
@@ -748,7 +748,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "sum(vm_data_size_bytes{job=\"vmstorage\"}) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"

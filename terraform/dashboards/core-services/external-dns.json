@@ -57,12 +57,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "external_dns_controller_verified_records{record_type=\"a\"} or vector(0)",
+          "expr": "external_dns_registry_records{record_type=\"a\"} or vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Verified A Records",
+      "title": "Managed A Records",
       "type": "stat"
     },
     {
@@ -94,12 +94,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "external_dns_controller_verified_records{record_type=\"cname\"} or vector(0)",
+          "expr": "external_dns_registry_records{record_type=\"cname\"} or vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Verified CNAME Records",
+      "title": "Managed CNAME Records",
       "type": "stat"
     },
     {

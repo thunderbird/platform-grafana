@@ -12,19 +12,20 @@ terraform {
     }
   }
 
+  # No profile — Atlantis uses ECS task role, local dev uses backend-config.hcl
+  # Local init: terraform init -backend-config=backend-config.hcl
   backend "s3" {
     bucket         = "platform-grafana-terraform-state"
     key            = "grafana/terraform.tfstate"
     region         = "us-west-2"
     encrypt        = true
     dynamodb_table = "platform-grafana-terraform-lock"
-    profile        = "mzla-shared"
   }
 }
 
+# No profile — credentials come from environment (AWS_PROFILE for local, task role for Atlantis)
 provider "aws" {
-  region  = "us-west-2"
-  profile = "mzla-shared"
+  region = "us-west-2"
 }
 
 # Retrieve Grafana service account token from Secrets Manager

@@ -1,0 +1,29 @@
+# Atlantis configuration for platform-grafana
+# Manages Grafana dashboards and folders via Terraform.
+#
+# Atlantis ECS runs in the same account (shared-services 826971876779)
+# so no cross-account assume-role is needed — the task role has direct access.
+
+version: 3
+
+projects:
+  - name: grafana
+    dir: terraform
+    workflow: grafana
+    autoplan:
+      when_modified:
+        - "*.tf"
+        - "*.tfvars"
+        - "dashboards/**/*.json"
+      enabled: true
+    apply_requirements: [approved, mergeable]
+
+workflows:
+  grafana:
+    plan:
+      steps:
+        - init
+        - plan
+    apply:
+      steps:
+        - apply

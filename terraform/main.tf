@@ -18,11 +18,13 @@ terraform {
     region         = "us-west-2"
     encrypt        = true
     dynamodb_table = "platform-grafana-terraform-lock"
+    profile        = "mzla-shared"
   }
 }
 
 provider "aws" {
-  region = "us-west-2"
+  region  = "us-west-2"
+  profile = "mzla-shared"
 }
 
 # Retrieve Grafana service account token from Secrets Manager

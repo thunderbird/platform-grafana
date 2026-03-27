@@ -323,7 +323,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(vm_promscrape_scrape_errors_total[$__rate_interval]))",
+          "expr": "sum(rate(vm_promscrape_scrapes_failed_total[$__rate_interval])) or vector(0)",
           "legendFormat": "Scrape Errors/sec",
           "refId": "A"
         }
@@ -529,7 +529,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(process_cpu_seconds_total{job=\"vmagent\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*vmagent.*\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -577,7 +577,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "process_resident_memory_bytes{job=\"vmagent\"}",
+          "expr": "process_resident_memory_bytes{job=~\".*vmagent.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }

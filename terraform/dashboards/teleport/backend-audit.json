@@ -75,24 +75,24 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.50, sum(rate(teleport_backend_atomic_write_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p50",
+          "expr": "rate(teleport_backend_atomic_write_seconds_sum[5m]) / rate(teleport_backend_atomic_write_seconds_count[5m])",
+          "legendFormat": "Avg Write Duration",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.95, sum(rate(teleport_backend_atomic_write_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p95",
+          "expr": "rate(teleport_backend_writes_total[5m])",
+          "legendFormat": "Writes/sec",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.99, sum(rate(teleport_backend_atomic_write_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p99",
+          "expr": "rate(teleport_backend_reads_total[5m])",
+          "legendFormat": "Reads/sec",
           "refId": "C"
         }
       ],
-      "title": "Backend Request Latency",
+      "title": "Backend Operations",
       "type": "timeseries"
     },
     {
@@ -314,12 +314,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(teleport_audit_failed_emit_events_total[5m]))",
+          "expr": "sum(rate(teleport_audit_stored_trimmed_events[5m])) or vector(0)",
           "legendFormat": "Failed Emit Rate",
           "refId": "A"
         }
       ],
-      "title": "Audit Emit Failures",
+      "title": "Audit Trimmed Events",
       "type": "timeseries"
     },
     {

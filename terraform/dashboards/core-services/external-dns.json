@@ -289,7 +289,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (type) (rate(external_dns_registry_endpoints_total[5m]))",
+          "expr": "sum by (type) (external_dns_registry_endpoints_total)",
           "legendFormat": "{{ type }}",
           "refId": "A"
         }

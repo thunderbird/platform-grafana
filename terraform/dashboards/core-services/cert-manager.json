@@ -118,8 +118,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "red", "value": null },
-              { "color": "orange", "value": 604800 },
-              { "color": "green", "value": 2592000 }
+              { "color": "orange", "value": 604800000 },
+              { "color": "green", "value": 2592000000 }
             ]
           },
           "unit": "dateTimeFromNow"

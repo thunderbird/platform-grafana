@@ -337,11 +337,7 @@
         "multi": true,
         "name": "namespace",
         "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(kube_namespace_labels,namespace)",
-          "refId": "NamespaceVariable"
-        },
+        "query": "label_values(kube_namespace_labels,namespace)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

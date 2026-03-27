@@ -52,13 +52,13 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "Active Time Series",
+      "title": "Stored Rows (vmstorage)",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(vm_active_time_series)",
-          "legendFormat": "Active Time Series",
+          "expr": "sum(vm_rows{job=~\".*vmstorage.*\"})",
+          "legendFormat": "Stored Rows",
           "refId": "A"
         }
       ]
@@ -96,7 +96,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(vm_rows_inserted_total{job=\"vminsert\"}[$__rate_interval]))",
+          "expr": "sum(rate(vm_rows_inserted_total{job=~\".*vminsert.*\"}[$__rate_interval]))",
           "legendFormat": "samples/sec",
           "refId": "A"
         }
@@ -135,7 +135,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(vm_http_requests_total{job=\"vmselect\"}[$__rate_interval]))",
+          "expr": "sum(rate(vm_http_requests_total{job=~\".*vmselect.*\"}[$__rate_interval]))",
           "legendFormat": "queries/sec",
           "refId": "A"
         }
@@ -174,7 +174,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(vm_data_size_bytes{job=\"vmstorage\"})",
+          "expr": "sum(vm_data_size_bytes{job=~\".*vmstorage.*\"})",
           "legendFormat": "Storage",
           "refId": "A"
         }
@@ -229,7 +229,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(vm_rows_inserted_total{job=\"vminsert\"}[$__rate_interval])) by (instance)",
+          "expr": "sum(rate(vm_rows_inserted_total{job=~\".*vminsert.*\"}[$__rate_interval])) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -277,7 +277,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(vm_new_time_series_created_total[$__rate_interval]))",
+          "expr": "sum(rate(vm_new_timeseries_created_total[$__rate_interval]))",
           "legendFormat": "New Series/sec",
           "refId": "A"
         }
@@ -332,19 +332,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.50, sum(rate(vm_request_duration_seconds_bucket{job=\"vmselect\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(vm_http_request_duration_seconds_bucket{job=~\".*vmselect.*\"}[$__rate_interval])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.95, sum(rate(vm_request_duration_seconds_bucket{job=\"vmselect\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(vm_http_request_duration_seconds_bucket{job=~\".*vmselect.*\"}[$__rate_interval])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.99, sum(rate(vm_request_duration_seconds_bucket{job=\"vmselect\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(vm_http_request_duration_seconds_bucket{job=~\".*vmselect.*\"}[$__rate_interval])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -447,7 +447,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(process_cpu_seconds_total{job=\"vminsert\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*vminsert.*\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -495,7 +495,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "process_resident_memory_bytes{job=\"vminsert\"}",
+          "expr": "process_resident_memory_bytes{job=~\".*vminsert.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -550,7 +550,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(process_cpu_seconds_total{job=\"vmselect\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*vmselect.*\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -598,7 +598,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "process_resident_memory_bytes{job=\"vmselect\"}",
+          "expr": "process_resident_memory_bytes{job=~\".*vmselect.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -653,7 +653,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(process_cpu_seconds_total{job=\"vmstorage\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{job=~\".*vmstorage.*\"}[$__rate_interval])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -701,7 +701,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "process_resident_memory_bytes{job=\"vmstorage\"}",
+          "expr": "process_resident_memory_bytes{job=~\".*vmstorage.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -749,7 +749,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(vm_data_size_bytes{job=\"vmstorage\"}) by (instance)",
+          "expr": "sum(vm_data_size_bytes{job=~\".*vmstorage.*\"}) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }

@@ -107,7 +107,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(traefik_entrypoint_open_connections{entrypoint=~\"$entrypoint\"})",
+          "expr": "sum(traefik_open_connections{entrypoint=~\"$entrypoint\"})",
           "legendFormat": "Open",
           "refId": "A"
         }
@@ -302,13 +302,13 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Request Rate by Service/Router",
+      "title": "Request Rate by Service",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (router, service) (rate(traefik_router_requests_total{router=~\"$router\"}[$__rate_interval]))",
-          "legendFormat": "{{ router }} / {{ service }}",
+          "expr": "sum by (service) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\"}[$__rate_interval]))",
+          "legendFormat": "{{ service }}",
           "refId": "A"
         }
       ]
@@ -469,30 +469,30 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Response Status Codes (Routers)",
+      "title": "Response Status Codes (Services)",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(traefik_router_requests_total{router=~\"$router\", code=~\"2..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"2..\"}[$__rate_interval]))",
           "legendFormat": "2xx",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(traefik_router_requests_total{router=~\"$router\", code=~\"3..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"3..\"}[$__rate_interval]))",
           "legendFormat": "3xx",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(traefik_router_requests_total{router=~\"$router\", code=~\"4..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"4..\"}[$__rate_interval]))",
           "legendFormat": "4xx",
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(traefik_router_requests_total{router=~\"$router\", code=~\"5..\"}[$__rate_interval]))",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{entrypoint=~\"$entrypoint\", code=~\"5..\"}[$__rate_interval]))",
           "legendFormat": "5xx",
           "refId": "D"
         }
@@ -614,25 +614,25 @@
         "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Request Duration by Router (p50 / p95 / p99)",
+      "title": "Request Duration by Service (p50 / p95 / p99)",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.50, sum by (router, le) (rate(traefik_router_request_duration_seconds_bucket{router=~\"$router\"}[$__rate_interval])))",
-          "legendFormat": "{{ router }} p50",
+          "expr": "histogram_quantile(0.50, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "legendFormat": "{{ service }} p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.95, sum by (router, le) (rate(traefik_router_request_duration_seconds_bucket{router=~\"$router\"}[$__rate_interval])))",
-          "legendFormat": "{{ router }} p95",
+          "expr": "histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "legendFormat": "{{ service }} p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.99, sum by (router, le) (rate(traefik_router_request_duration_seconds_bucket{router=~\"$router\"}[$__rate_interval])))",
-          "legendFormat": "{{ router }} p99",
+          "expr": "histogram_quantile(0.99, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{entrypoint=~\"$entrypoint\"}[$__rate_interval])))",
+          "legendFormat": "{{ service }} p99",
           "refId": "C"
         }
       ]
@@ -692,8 +692,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (entrypoint, method) (traefik_entrypoint_open_connections{entrypoint=~\"$entrypoint\"})",
-          "legendFormat": "{{ entrypoint }} ({{ method }})",
+          "expr": "traefik_open_connections{entrypoint=~\"$entrypoint\"}",
+          "legendFormat": "{{entrypoint}} ({{protocol}})",
           "refId": "A"
         }
       ]
@@ -767,14 +767,14 @@
       {
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-        "definition": "label_values(traefik_router_requests_total, router)",
+        "definition": "label_values(traefik_service_requests_total, service)",
         "hide": 0,
         "includeAll": true,
-        "label": "Router",
+        "label": "Service",
         "multi": true,
-        "name": "router",
+        "name": "service",
         "options": [],
-        "query": "label_values(traefik_router_requests_total, router)",
+        "query": "label_values(traefik_service_requests_total, service)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

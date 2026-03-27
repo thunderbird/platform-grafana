@@ -139,8 +139,38 @@
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
           "expr": "certmanager_certificate_expiration_timestamp_seconds * 1000",
           "format": "table",
+          "instant": true,
           "legendFormat": "",
           "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "cluster": true,
+              "container": true,
+              "endpoint": true,
+              "instance": true,
+              "job": true,
+              "pod": true,
+              "prometheus": true,
+              "region": true
+            },
+            "renameByName": {
+              "Value": "Expires",
+              "name": "Certificate",
+              "namespace": "Namespace"
+            },
+            "indexByName": {
+              "namespace": 0,
+              "name": 1,
+              "Value": 2
+            }
+          }
         }
       ],
       "title": "Certificate Expiry Timeline",
@@ -253,7 +283,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (controller) (rate(certmanager_controller_sync_call_count{status=\"error\"}[5m]))",
+          "expr": "sum by (controller) (rate(certmanager_controller_sync_call_count{status=\"error\"}[5m])) or vector(0)",
           "legendFormat": "{{ controller }}",
           "refId": "A"
         }

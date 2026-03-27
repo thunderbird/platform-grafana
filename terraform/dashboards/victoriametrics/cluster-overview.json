@@ -332,19 +332,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.50, sum(rate(vm_http_request_duration_seconds_bucket{job=~\".*vmselect.*\"}[$__rate_interval])) by (le))",
+          "expr": "avg(vm_request_duration_seconds{job=~\".*vmselect.*\", quantile=\"0.5\"})",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.95, sum(rate(vm_http_request_duration_seconds_bucket{job=~\".*vmselect.*\"}[$__rate_interval])) by (le))",
+          "expr": "avg(vm_request_duration_seconds{job=~\".*vmselect.*\", quantile=\"0.95\"})",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.99, sum(rate(vm_http_request_duration_seconds_bucket{job=~\".*vmselect.*\"}[$__rate_interval])) by (le))",
+          "expr": "avg(vm_request_duration_seconds{job=~\".*vmselect.*\", quantile=\"0.99\"})",
           "legendFormat": "p99",
           "refId": "C"
         }

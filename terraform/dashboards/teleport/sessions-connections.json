@@ -83,30 +83,24 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "teleport_active_sessions_total{type=\"ssh\"}",
-          "legendFormat": "SSH Sessions",
+          "expr": "teleport_active_connections or vector(0)",
+          "legendFormat": "Active Connections",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "teleport_active_sessions_total{type=\"k8s\"}",
-          "legendFormat": "Kubernetes Sessions",
+          "expr": "teleport_authenticated_active_connections or vector(0)",
+          "legendFormat": "Authenticated Connections",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "teleport_active_sessions_total{type=\"db\"}",
-          "legendFormat": "Database Sessions",
+          "expr": "teleport_kubernetes_server_exec_in_flight_sessions or vector(0)",
+          "legendFormat": "K8s Exec Sessions",
           "refId": "C"
-        },
-        {
-          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "teleport_active_sessions_total{type=\"app\"}",
-          "legendFormat": "Application Sessions",
-          "refId": "D"
         }
       ],
-      "title": "Active Sessions by Type",
+      "title": "Active Connections & Sessions",
       "type": "timeseries"
     },
     {
@@ -140,7 +134,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(teleport_active_sessions_total)",
+          "expr": "sum(teleport_active_connections) or vector(0)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -277,7 +271,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(increase(teleport_connections_total[5m]))",
+          "expr": "sum(increase(teleport_accepted_connections_total[5m])) or vector(0)",
           "legendFormat": "Total Connections",
           "refId": "A"
         }
@@ -330,7 +324,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (type) (rate(teleport_connections_total[5m]))",
+          "expr": "rate(teleport_accepted_connections_total[5m]) or vector(0)",
           "legendFormat": "{{ type }}",
           "refId": "A"
         }
@@ -392,12 +386,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (success) (rate(teleport_auth_attempts_total{success=\"false\"}[5m]))",
+          "expr": "rate(teleport_connect_to_node_attempts_total[5m]) or vector(0)",
           "legendFormat": "Failed Auth Attempts",
           "refId": "A"
         }
       ],
-      "title": "Failed Authentication Attempts",
+      "title": "Node Connection Attempts",
       "type": "timeseries"
     },
     {
@@ -445,12 +439,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(teleport_certificate_mismatch_total[5m])",
-          "legendFormat": "Certificate Mismatch Rate",
+          "expr": "rate(teleport_user_certificates_generated[5m]) or vector(0)",
+          "legendFormat": "Certificate Generation Rate",
           "refId": "A"
         }
       ],
-      "title": "Certificate Mismatch Rate",
+      "title": "Certificate Generation Rate",
       "type": "timeseries"
     }
   ],

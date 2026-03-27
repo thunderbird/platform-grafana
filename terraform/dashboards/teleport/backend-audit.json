@@ -75,19 +75,19 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.50, sum(rate(teleport_backend_requests_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(teleport_backend_atomic_write_seconds_bucket[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.95, sum(rate(teleport_backend_requests_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(teleport_backend_atomic_write_seconds_bucket[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "histogram_quantile(0.99, sum(rate(teleport_backend_requests_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(teleport_backend_atomic_write_seconds_bucket[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -140,13 +140,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(teleport_backend_batch_read_requests_total[5m])",
+          "expr": "rate(teleport_backend_reads_total[5m])",
           "legendFormat": "Batch Read Rate",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "rate(teleport_backend_batch_write_requests_total[5m])",
+          "expr": "rate(teleport_backend_writes_total[5m])",
           "legendFormat": "Batch Write Rate",
           "refId": "B"
         }
@@ -199,7 +199,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum by (event) (rate(teleport_cache_events_total[5m]))",
+          "expr": "sum by (event) (rate(teleport_cache_events[5m]))",
           "legendFormat": "{{ event }}",
           "refId": "A"
         }
@@ -260,7 +260,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "sum(rate(teleport_audit_emit_events_total[5m]))",
+          "expr": "sum(rate(teleport_audit_emit_events[5m]))",
           "legendFormat": "Audit Event Rate",
           "refId": "A"
         }

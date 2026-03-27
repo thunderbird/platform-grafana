@@ -512,7 +512,7 @@
         "multi": false,
         "name": "realm",
         "options": [],
-        "query": { "qryType": 1, "query": "label_values(keycloak_logins, realm)" },
+        "query": "label_values(keycloak_logins, realm)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

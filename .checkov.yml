@@ -1,0 +1,16 @@
+soft-fail: false
+compact: true
+directory:
+  - terraform
+framework:
+  - terraform
+skip-check:
+  # S3 backend bucket policies are managed outside this repo
+  - CKV_AWS_145  # S3 bucket encryption with KMS
+  - CKV_AWS_144  # S3 cross-region replication
+  - CKV_AWS_18   # S3 access logging
+  - CKV2_AWS_62  # S3 event notifications
+  - CKV2_AWS_61  # S3 lifecycle configuration
+  - CKV2_AWS_6   # S3 public access block
+  # Grafana provider resources are not AWS infra
+  - CKV_GIT_4    # GitHub Actions pinned to hash

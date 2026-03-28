@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: terraform-linters/setup-tflint@v4
-      - run: tflint --recursive --chdir terraform
+      - run: tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl" --chdir terraform
 
   checkov:
     runs-on: ubuntu-latest

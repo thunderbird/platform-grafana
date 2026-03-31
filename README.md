@@ -25,11 +25,11 @@ platform-grafana/
 
 ## Running Locally
 
-The AWS profile `mzla-shared` is hardcoded in `main.tf` (shared-services account `826971876779`).
+Requires AWS profile `mzla-shared` (shared-services account `826971876779`).
 
 ```bash
 cd terraform
-terraform init
+terraform init -backend-config=backend-config.hcl
 terraform plan
 terraform apply
 ```

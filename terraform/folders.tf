@@ -25,3 +25,7 @@ resource "grafana_folder" "keycloak" {
 resource "grafana_folder" "core_services" {
   title = "Core Services"
 }
+
+resource "grafana_folder" "bitergia" {
+  title = "Bitergia"
+}

@@ -94,3 +94,9 @@ resource "grafana_dashboard" "aws_load_balancer_controller" {
   folder      = grafana_folder.core_services.id
   config_json = file("${path.module}/dashboards/core-services/aws-load-balancer-controller.json")
 }
+
+# Bitergia dashboards
+resource "grafana_dashboard" "bitergia_infrastructure" {
+  folder      = grafana_folder.bitergia.id
+  config_json = file("${path.module}/dashboards/bitergia/infrastructure.json")
+}

@@ -1,0 +1,22 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+  "name": "Platform Grafana",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {
+      "version": "2.34.13"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "2.88.1"
+    },
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.14.2",
+      "tflint": "0.57.0"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.13"
+    }
+  },
+  "postCreateCommand": "pip install checkov",
+  "remoteUser": "vscode"
+}

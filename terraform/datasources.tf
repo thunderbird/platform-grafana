@@ -34,3 +34,29 @@ resource "grafana_data_source" "cloudwatch_workloads" {
     assumeRoleArn = "arn:aws:iam::668807881758:role/workloads-prod-grafana-cloudwatch"
   })
 }
+
+# Cross-account CloudWatch Logs — tb-dev (718959508124) — added for #195
+# Grafana IRSA → sts:AssumeRole → mzla-tb-dev-grafana-cloudwatch
+resource "grafana_data_source" "cloudwatch_tb_dev" {
+  type = "cloudwatch"
+  name = "CloudWatch Logs — tb-dev01"
+
+  json_data_encoded = jsonencode({
+    defaultRegion = "eu-central-1"
+    authType      = "assumeRole"
+    assumeRoleArn = "arn:aws:iam::718959508124:role/mzla-tb-dev-grafana-cloudwatch"
+  })
+}
+
+# Cross-account CloudWatch Logs — tb-prod (689951664252) — added for #195
+# Grafana IRSA → sts:AssumeRole → mzla-tb-prod-grafana-cloudwatch
+resource "grafana_data_source" "cloudwatch_tb_prod" {
+  type = "cloudwatch"
+  name = "CloudWatch Logs — tb-prod01"
+
+  json_data_encoded = jsonencode({
+    defaultRegion = "eu-central-1"
+    authType      = "assumeRole"
+    assumeRoleArn = "arn:aws:iam::689951664252:role/mzla-tb-prod-grafana-cloudwatch"
+  })
+}

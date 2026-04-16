@@ -11,7 +11,7 @@ All tools are pinned to specific versions in `devcontainer.json` via devcontaine
 | AWS CLI | 2.34.13 | `devcontainers/features/aws-cli:1` |
 | GitHub CLI (`gh`) | 2.88.1 | `devcontainers/features/github-cli:1` |
 | Terraform | 1.14.2 | `devcontainers/features/terraform:1` |
-| tflint | 0.55.3 | `devcontainers/features/terraform:1` (bundled) |
+| tflint | 0.57.0 | `devcontainers/features/terraform:1` (bundled) |
 | Python | 3.13 | `devcontainers/features/python:1` |
 | checkov | latest | `pip install checkov` (postCreateCommand) |
 

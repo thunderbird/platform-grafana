@@ -11,7 +11,7 @@
     },
     "ghcr.io/devcontainers/features/terraform:1": {
       "version": "1.14.2",
-      "tflint": "0.55.3"
+      "tflint": "0.57.0"
     },
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.13"

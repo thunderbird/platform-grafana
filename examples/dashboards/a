@@ -1,0 +1,2781 @@
+=== #127 Add missing IAM permissions for datalake pulumi preview
+## Summary
+
+The datalake GitHub Actions roles were missing IAM permissions required by the AWS Pulumi provider during `pulumi preview`. These were discovered when adding preview-only validation jobs to the bizint datalake-validate workflow (thunderbird/bizint#60).
+
+## Missing permissions
+
+| Permission | Resource | Why needed |
+|---|---|---|
+| `states:ValidateStateMachineDefinition` | `arn:aws:states:*:*:stateMachine:*` | AWS provider validates Step Functions state machine definitions when diffing `aws.sfn.StateMachine` resources |
+| `ecs:DescribeTaskDefinition` | `*` | AWS provider reads task definition details when diffing `aws.ecs.TaskDefinition` resources |
+
+## Affected roles
+
+- `mzla-business-data-prod-datalake-gha-dev`
+- `mzla-business-data-prod-datalake-gha-prod`
+
+## Fix
+
+Both permissions added to the `PulumiPreviewReadOnly` statement in `pulumi/environments/mzla-business-data/__main__.py`.
+
+Resolved by: #126
+
+=== #122 Add CloudWatch Logs datasources to Grafana (cross-account)
+## Summary
+
+Add both CloudWatch Logs instances as Grafana datasources so teams can query application logs from Grafana alongside VictoriaLogs.
+
+**Log groups** (both in `eu-central-1`):
+- `/eks/mzla/mzla-eks-shared01/applications` — shared-services account (826971876779)
+- `/eks/mzla/mzla-eks-workloads01/applications` — workloads account (668807881758)
+
+**Grafana** runs on `mzla-eks-shared01` in shared-services (826971876779).
+
+## Work Required
+
+### 1. IAM — Cross-account access for workloads CloudWatch
+
+Grafana needs to assume a role in the workloads account to read its CloudWatch logs.
+
+**In platform-infrastructure (workloads Pulumi):**
+- Create an IAM role in workloads (668807881758) that trusts the Grafana IRSA role in shared-services
+- Permissions: `logs:GetLogEvents`, `logs:GetLogGroupFields`, `logs:DescribeLogGroups`, `logs:DescribeLogStreams`, `logs:StartQuery`, `logs:StopQuery`, `logs:GetQueryResults`, `logs:FilterLogEvents`
+- Scoped to `arn:aws:logs:eu-central-1:668807881758:log-group:/eks/mzla/*`
+
+**In platform-infrastructure (shared-services Pulumi):**
+- Grant Grafana's IRSA role (or service account) permission to `sts:AssumeRole` on the workloads cross-account role
+- Grant Grafana direct CloudWatch Logs read access for its own account (eu-central-1)
+
+### 2. Grafana Datasources — Terraform in platform-grafana
+
+**Datasource 1: CloudWatch (shared-services)**
+- Type: `cloudwatch`
+- Region: `eu-central-1`
+- Default auth (IRSA — same account)
+- Name suggestion: `CloudWatch Logs — shared01`
+
+**Datasource 2: CloudWatch (workloads)**
+- Type: `cloudwatch`
+- Region: `eu-central-1`  
+- Auth: assume role → `arn:aws:iam::668807881758:role/<cross-account-role>`
+- Name suggestion: `CloudWatch Logs — workloads01`
+
+## Context
+
+- Vector dual-ships logs to VictoriaLogs + CloudWatch per #118 / PR #119
+- Log groups have 3-day retention and KMS encryption per PR #121
+- Grafana datasources are managed as Terraform in `thunderbird/platform-grafana`
+- Grafana currently uses GitHub OAuth and has VictoriaMetrics + VictoriaLogs datasources
+
+## Suggested Prompt for Implementation
+
+```
+I need to add two CloudWatch Logs datasources to Grafana. Grafana runs on
+mzla-eks-shared01 (shared-services, 826971876779). The log groups are in eu-central-1:
+
+1. /eks/mzla/mzla-eks-shared01/applications (same account — 826971876779)
+2. /eks/mzla/mzla-eks-workloads01/applications (cross-account — 668807881758)
+
+This requires:
+- platform-infrastructure: IAM cross-account role in workloads for Grafana to
+  assume, plus CloudWatch read permissions on Grafana's own IRSA role
+- platform-grafana: Terraform datasource resources for both CloudWatch instances
+
+Check the existing Grafana IRSA role and datasource patterns in both repos.
+Create a branch per repo, implement, and PR. Issue: thunderbird/platform-infrastructure#122
+```
+
+## References
+
+- Parent: #79
+- Prior work: #118, PR #119 (Vector dual-ship), PR #121 (retention + KMS)
+- Grafana Terraform: `thunderbird/platform-grafana`
+- Observability docs: `docs/observability.md`
+
+=== #118 Dual-ship Vector logs to VictoriaMetrics and CloudWatch (eu-central-1)
+## Summary
+
+Configure Vector DaemonSets on both EKS clusters to dual-ship logs to CloudWatch Logs in `eu-central-1` alongside the existing VictoriaMetrics pipeline.
+
+## Scope
+
+### Infrastructure (Pulumi)
+- Create IRSA roles for Vector service accounts on both clusters with CloudWatch Logs permissions (`CreateLogGroup`, `CreateLogStream`, `PutLogEvents`)
+- Trust relationship via OIDC for `monitoring/vector` service account
+
+### Application (Vector Config)
+- Add `aws_cloudwatch_logs` sink to both Vector DaemonSet ConfigMaps
+- Add `remap` transform to inject `cluster_name` metadata
+- Log group pattern: `/eks/mzla/${cluster_name}/applications`
+- Region: `eu-central-1`
+
+### Clusters
+- **mzla-eks-shared01** (us-east-1) → CloudWatch in eu-central-1
+- **mzla-eks-workloads01** (eu-central-1) → CloudWatch in eu-central-1
+
+## Parent Issue
+Sub-issue of #79
+
+=== #117 Devcontainer: add credential setup for ArgoCD, Teleport, and GitHub CLI
+## Summary
+
+The devcontainer has AWS SSO and Pulumi token credential flows documented and working (#116). The following tools also require authentication and currently have no documented setup path for the devcontainer environment:
+
+## Tools needing credential docs / setup
+
+### Teleport (`tsh`)
+- Used for Kubernetes SSO access to `mzla-eks-shared01` and `mzla-eks-workloads01`
+- Requires `tsh login --proxy=<proxy> --auth=github` (browser-based OAuth)
+- On headless machines: needs `--browser=none` and manual URL flow
+- After login, `tsh kube login <cluster>` writes a kubeconfig entry — should map into the container or be persisted via a mount
+
+### ArgoCD CLI (`argocd`)
+- Used for GitOps operations against mzla-eks clusters
+- Requires `argocd login <server> --sso` (browser-based) or `--username`/`--password`
+- Session token stored in `~/.argocd/config` — could be bind-mounted from host
+
+### GitHub CLI (`gh`)
+- Requires `gh auth login` (browser or token)
+- On headless machines: `gh auth login --with-token` via stdin, or `GITHUB_TOKEN` env var
+- `GITHUB_TOKEN` could be forwarded via `remoteEnv` the same way `PULUMI_ACCESS_TOKEN` is
+
+## Acceptance criteria
+
+- [ ] Document login flow for each tool in `.devcontainer/README.md`
+- [ ] Add `remoteEnv` forwarding for any token-based tools (e.g. `GITHUB_TOKEN`)
+- [ ] Document headless alternatives where browser login is the default
+- [ ] Test each flow inside the devcontainer
+
+## Related
+
+Opened from PR #116 (devcontainer initial setup).
+
+=== #115 Add devcontainer for platform-infrastructure development
+## Summary
+
+Add a devcontainer configuration so contributors and Claude Code AI agents can work in a reproducible environment with all required tooling pre-installed — no manual setup required.
+
+## Feature layers
+
+All tools installed via devcontainer feature registry:
+
+| Feature | Tool | Version |
+|---------|------|---------|
+| `devcontainers/features/python:1` | Python | 3.13 |
+| `devcontainers/features/aws-cli:1` | AWS CLI | v2 |
+| `devcontainers/features/github-cli:1` | gh | latest |
+| `devcontainers-extra/features/pulumi:1` | Pulumi CLI | latest |
+| `devcontainers-extra/features/actionlint:1` | actionlint | latest |
+| `devcontainers-extra/features/pre-commit:2.0.18` | pre-commit | 2.0.18 |
+| `jsburckhardt/devcontainer-features/ruff:1` | ruff | latest |
+
+Tools without devcontainer features (installed via `postCreateCommand`):
+- **ArgoCD CLI** — GitOps operations against mzla-eks clusters
+- **Teleport tsh v18** — Kubernetes SSO access to mzla-eks-shared01 and mzla-eks-workloads01
+
+## Claude Code agent support
+
+When Claude Code runs inside the devcontainer, all Bash tool calls execute in the container environment automatically. Agents can run `pulumi preview`, `actionlint`, `ruff`, `argocd`, and other tools without any host installation.
+
+For unattended agent tasks:
+```bash
+devcontainer exec --workspace-folder . \
+  claude --dangerously-skip-permissions "run pulumi preview on all environments"
+```
+
+## Optional bind mounts
+
+Commented-out mounts in `devcontainer.json` for local development:
+- `~/.aws` — share host AWS SSO credentials
+- `~/.ssh` — share host SSH keys
+
+Closed by #116.
+
+=== #114 Add GitHub Actions OIDC roles for bizint/datalake in mzla-business-data
+## Summary
+
+Provision GitHub Actions OIDC federation in the `mzla-business-data` account (324827177554, us-east-2) so that `thunderbird/bizint` datalake CI/CD workflows can authenticate to AWS without static IAM credentials.
+
+## Resources
+
+- GitHub OIDC identity provider (`token.actions.githubusercontent.com`)
+- Two scoped IAM roles:
+  - `mzla-business-data-prod-datalake-gha-dev` — trusted for `environment:dev` and `pull_request` sub claims
+  - `mzla-business-data-prod-datalake-gha-prod` — trusted for `environment:prod` only
+
+## Permissions granted
+
+Write permissions are gated on `environment:*` sub claim — PR workflows (`pull_request`) are read-only.
+
+- **ECR**: push images to all repos in account (`environment:*` only)
+- **ECS**: register task definitions, update services, describe clusters/services (`environment:*` only)
+- **Step Functions**: `StartExecution` + `ListExecutions` (stateMachine ARNs, `environment:*` only); `DescribeExecution` (execution ARNs, `environment:*` only)
+- **Lambda**: update/publish `reconciliation-*` functions (`environment:*` only)
+- **IAM PassRole**: `*-execution-role-*` / `*-task-role-*` → `ecs-tasks.amazonaws.com` only (`environment:*` only)
+- **Pulumi preview read-only**: EC2, ECR, ECS, IAM, Lambda, Step Functions, SSM (scoped to `/neon/*`, `/fru-sync/*`, `/paddle-dlt/*`, `/reconciliation/*`), CloudWatch Logs, EventBridge, SNS, KMS — available to all trusted subs including `pull_request`
+
+## Implementation
+
+New Pulumi environment: `pulumi/environments/mzla-business-data/`
+
+Account ID derived at deploy time via `aws.get_caller_identity()` — not hardcoded in config.
+
+## Status
+
+Deployed to `mzla-business-data` (324827177554) via `pulumi up --stack thunderbird/prod`. Role ARNs are exported as stack outputs. Pending: wire ARNs into `thunderbird/bizint` GitHub Environment secrets and validate end-to-end in a workflow.
+
+Closed by #113.
+
+=== #108 Add cluster selector variable to all Grafana dashboards
+## Summary
+Add a `cluster` template variable to all 18 Grafana dashboards in `platform-grafana/terraform/dashboards/` so users can filter by Kubernetes cluster.
+
+## Background
+With two EKS clusters (`mzla-eks-shared01` and `mzla-eks-workloads01`) both remote-writing metrics to a central VictoriaMetrics instance via vmagent external labels (`cluster`), dashboards currently show aggregated data with no way to scope to a specific cluster.
+
+## Acceptance Criteria
+- All dashboards have a "Cluster" dropdown variable (multi-select, default "All")
+- All PromQL expressions include `cluster=~"$cluster"` filtering
+- Existing dependent variables (namespace, pod, etc.) cascade from cluster selection
+- `terraform plan` shows only dashboard updates, no other changes
+
+=== #105 Fix BoltDB lock contention during Atlantis ECS deployments
+During ECS rolling deployments, the new Atlantis task starts before the old one fully drains, causing BoltDB lock contention on the shared EFS volume:
+
+```
+Error: initializing server: starting BoltDB: timeout (a possible cause is another Atlantis instance already running)
+```
+
+The new task eventually recovers after the old task shuts down (~6 min delay), but this causes unnecessary restart churn and a brief outage window.
+
+**Fix:** Set `minimumHealthyPercent: 0` / `maximumPercent: 100` on the ECS service deployment configuration so ECS stops the old task before starting the new one. Atlantis is a singleton service with EFS state — it cannot run two instances concurrently.
+
+Related: #103
+
+=== #103 Add platform-infrastructure to Atlantis server repo allowlist
+Atlantis webhooks fire on PRs in this repo but the server rejects them with:
+
+> Error: This repo is not allowlisted for Atlantis.
+
+The repo-level `atlantis.yaml` has `projects: []` (intentionally empty — we use Pulumi, not Terraform), but the server-side `--repo-allowlist` doesn't include this repo, so every PR triggers the error.
+
+Either add `thunderbird/platform-infrastructure` to the Atlantis server allowlist, or remove the webhook integration for this repo entirely.
+
+=== #99 BAP Phase 1: Bootstrap workload cluster — ArgoCD, platform components, observability, Teleport
+## Goal
+
+Register the workload cluster in shared-services ArgoCD and deploy all platform components via ArgoCD Applications targeting the remote cluster.
+
+## Scope
+
+### ArgoCD cluster registration
+
+- Cluster Secret (`resources/workloads-cluster-secret.yaml`) with `argocd.argoproj.io/secret-type: cluster`
+- ArgoCD on shared-services assumes IAM role in mzla-workloads via `awsAuthConfig`
+- May need IRSA policy update on shared-services ArgoCD SA for `sts:AssumeRole`
+
+### AppProject updates
+
+- Update `workloads.yaml` — add cluster destination + sourceRepos
+- Update `platform.yaml` — add `bitergia-deploy` to sourceRepos
+- Create `bitergia.yaml` — restricted to bitergia namespace on workload cluster
+
+### Platform components (ArgoCD Applications in `apps/workloads/`)
+
+| App | Wave | Notes |
+|-----|------|-------|
+| External Secrets Operator | 1 | IRSA from Phase 0 |
+| ClusterSecretStore | 2 | Points to mzla-workloads Secrets Manager (eu-central-1) |
+| ACK controllers (rds, elasticache, opensearch, s3) | 2 | IRSA from Phase 0 |
+| cert-manager | 2 | |
+| Cloudflare Tunnel operator | 3 | |
+| VictoriaMetrics operator | 3 | Operator only (no VMCluster) |
+| VMAgent | 4 | remote_write to victoriametrics.infra.thunderbird.net |
+| Vector DaemonSet | 4 | Logs to victoriametrics.infra.thunderbird.net |
+| Teleport kube-agent | 5 | Joins shared-services Teleport cluster |
+
+### Observability
+
+- VMAgent remote_writes to shared-services vmauth with bearer token
+- Vector ships logs to shared-services vmauth with bearer token
+- vmauth token read cross-account from shared-services Secrets Manager via resource policy (single source of truth)
+- externalLabels: `cluster: mzla-eks-workloads01`, `region: eu-central-1`
+
+### Key files
+
+- `argocd/apps/workloads-app-of-apps.yaml` — NEW
+- `argocd/apps/workloads/*.yaml` — NEW (12 Application CRs)
+- `argocd/helm-values/workloads/*.yaml` — NEW (10 values files)
+- `argocd/resources/workloads-cluster-secret.yaml` — NEW
+- `argocd/resources/workloads/*.yaml` — NEW (ClusterSecretStore, Vector, ExternalSecret)
+- `argocd/projects/{workloads,platform,bitergia}.yaml` — MODIFY/NEW
+
+### Verification
+
+- All workload apps Synced/Healthy in ArgoCD
+- ESO, ACK controllers, VMAgent, Vector, Teleport agent all running
+- `up{cluster="mzla-eks-workloads01"}` returns metrics in VictoriaMetrics
+- `cluster:mzla-eks-workloads01` returns logs in VictoriaLogs
+- `tsh kube ls` shows workload cluster
+
+## Dependencies
+
+- #98 (Phase 0: cluster must exist)
+
+Parent: #84
+
+=== #98 BAP Phase 0: Provision EKS workload cluster in mzla-workloads eu-central-1
+## Goal
+
+Provision the EKS workload cluster infrastructure in mzla-workloads (668807881758) eu-central-1 via Pulumi.
+
+## Scope
+
+### Shared Pulumi modules (`pulumi/modules/`)
+
+Port logic from `tb_pulumi/eks.py` and mzla-shared-services modules into standalone modules using raw `pulumi_aws` + `pulumi_eks` — no tb_pulumi dependency.
+
+- `modules/networking.py` — VPC, subnets, NAT gateways, VPC endpoints
+- `modules/eks.py` — EKS cluster, managed node groups, KMS encryption, add-ons
+- `modules/irsa.py` — IRSA role creation (OIDC trust policies)
+- `modules/argocd_access.py` — Cross-account IAM role for ArgoCD
+
+### Environment (`pulumi/environments/mzla-workloads/`)
+
+- `__main__.py` — Entrypoint wiring modules with config
+- `config.prod.yaml` — VPC (10.110.0.0/16, 2 AZs), EKS (mzla-eks-workloads01), IRSA roles (ESO, ACK controllers ×4, YACE), ArgoCD cross-account role
+
+### Key config
+
+- **Region:** eu-central-1
+- **Cluster:** mzla-eks-workloads01, EKS 1.35
+- **Node groups:** system (2× m7g.large), general-arm64 (2× m7g.large)
+- **IRSA roles:** ESO, ACK (rds, elasticache, opensearch, s3), YACE
+- **ArgoCD access:** IAM role trusting shared-services (826971876779) with system:masters
+
+### Verification
+
+- `kubectl get nodes` returns 4 nodes
+- IRSA roles exist in mzla-workloads account
+- VPC endpoints functional (ECR image pulls work)
+- Cluster endpoint and CA exported for Phase 1
+
+## Dependencies
+
+None — can run in parallel with #85.
+
+Parent: #84
+
+=== #94 Reorganize Pulumi projects into pulumi/environments/
+## Summary
+
+Move the three Pulumi project directories from the repo root into `pulumi/environments/` to reduce top-level clutter and mirror the terraform directory convention.
+
+### Target layout
+
+```
+platform-infrastructure/
+├── pulumi/
+│   └── environments/
+│       ├── identity-center/         ← from identity-center/
+│       ├── logging/                 ← from logging/
+│       └── mzla-shared-services/    ← from shared-services/ (renamed)
+├── argocd/
+├── docs/
+└── ...
+```
+
+## Scope
+
+1. `mkdir -p pulumi/environments`
+2. `git mv identity-center pulumi/environments/identity-center`
+3. `git mv logging pulumi/environments/logging`
+4. `git mv shared-services pulumi/environments/mzla-shared-services`
+5. Update `CLAUDE.md` repository layout section
+6. Update `.gitignore` paths if hardcoded
+7. Update `PLAN.md`, `HANDOFF.md` path references
+
+## Implementation notes
+
+- Pulumi state is project-name-based (from `Pulumi.yaml`), not directory-path-based — moving directories is safe
+- `Pulumi.yaml` project names stay unchanged
+- The `shared-services/` directory is renamed to `mzla-shared-services/` for consistency with the account name (see rename issue)
+
+## Verification
+
+```bash
+cd pulumi/environments/identity-center && AWS_PROFILE=mzla-root pulumi preview
+# Expect: zero diff (proves state is intact after move)
+```
+
+=== #93 Create new AWS accounts: mzla-tb-dev, mzla-tb-prod, mzla-workloads
+## Summary
+
+Create three new AWS accounts in the Workloads OU for Thunderbird product workloads.
+
+| Account | Email | OU |
+|---------|-------|----|
+| mzla-tb-dev | aws-admin+tb-dev@thunderbird.net | Workloads |
+| mzla-tb-prod | aws-admin+tb-prod@thunderbird.net | Workloads |
+| mzla-workloads | aws-admin+workloads@thunderbird.net | Workloads |
+
+## Scope
+
+- Add 3 entries under `new_accounts:` in `identity-center/config.prod.yaml`
+- Add accounts to `organizational_units.workloads.accounts:`
+- Add Identity Center assignments: `platform-admins` → `AdministratorAccess`, `read-only` → `ReadOnlyAccess`
+- Update `CLAUDE.md` OU hierarchy
+
+## Implementation notes
+
+- No code changes needed — `org_structure.py` and `identity_center.py` are fully config-driven
+- Region-deny SCP auto-applied (Workloads OU already in `region_scp_ou_ids` at `__main__.py:85`)
+
+## Post-deployment
+
+- Run `AWS_PROFILE=mzla-root pulumi up` on identity-center stack
+- Capture new account IDs from Pulumi outputs
+- Add account IDs as comments in `accounts:` section of config.prod.yaml
+- Set up AWS CLI SSO profiles for new accounts
+
+## Verification
+
+```bash
+cd identity-center && AWS_PROFILE=mzla-root pulumi preview
+# Expect: 3 new accounts created, placed in Workloads OU, with SSO assignments
+```
+
+=== #92 Rename shared-services AWS account to mzla-shared-services
+## Summary
+
+Rename the `shared-services` AWS account display name to `mzla-shared-services` for consistency with the MZLA naming convention used by other accounts (mzla-logging, mzla-business-data).
+
+## Scope
+
+- Update `name` field in `identity-center/config.prod.yaml` under `new_accounts.shared-services`
+- Update `CLAUDE.md` OU hierarchy and AWS CLI profiles table
+- Config key `shared-services` stays unchanged everywhere (OU placements, Identity Center assignments, Pulumi project name) to avoid resource name changes
+
+## Implementation notes
+
+- Pulumi will issue an in-place AWS `UpdateAccount` API call — non-destructive rename
+- The Pulumi project name in `shared-services/Pulumi.yaml` must NOT change (it drives the `shared-services-prod-*` resource name prefix)
+- IRSA roles, ArgoCD paths, Secrets Manager paths are unaffected
+
+## Verification
+
+```bash
+cd identity-center && AWS_PROFILE=mzla-root pulumi preview
+# Expect: 1 update (account name change), 0 creates, 0 deletes
+```
+
+=== #91 Migrate Pulumi stacks to Terraform + Atlantis
+## Summary
+
+Migrate all three Pulumi stacks (identity-center, logging, shared-services) to Terraform with Atlantis for PR-based plan/apply.
+
+## Motivation
+
+- Pulumi's `tb_pulumi` library is a maintenance burden and abstracts too much
+- Terraform is the team's stronger skillset
+- Atlantis is already running for `platform-grafana` — extend to this repo
+
+## Scope
+
+- **240 AWS resources** across 3 stacks (124 identity-center, 2 logging, 114 shared-services)
+- 1 unmanaged resource (coredns addon) to import
+- Atlantis already deployed as ECS Fargate service — just needs this repo added to its config
+
+## Approach
+
+Spec document: `claude-code-pulumi-to-terraform.md`
+Migration plan: `.plans/pulumi-to-terraform-migration.md`
+
+### Phases
+0. **Discovery** — Export Pulumi state, map resource IDs to Terraform import IDs
+1. **Bootstrap** — State buckets + DynamoDB lock tables + org structure + SCPs
+2. **Scripts & Config** — `discover.sh`, `atlantis.yaml`
+3. **Modules** — 11 modules (org-structure and SCPs moved to bootstrap)
+4. **Environments** — identity-center, logging, shared-services with import blocks
+5. **Atlantis config** — Add this repo to existing Atlantis instance
+
+### Key decisions made
+- Org structure + SCPs live in `terraform/bootstrap/` (matches dsp-terraform pattern)
+- Logging environment state stored in management account (Security OU SCP blocks DynamoDB)
+- Atlantis module not needed — already deployed, just needs repo allowlist update
+- `for_each` over `count` everywhere
+- AWS provider ~> 6.0, Terraform >= 1.14.5
+
+=== #90 BAP Phase 7: Production hardening — Multi-AZ, Grafana dashboard, alerting
+Parent: #84
+Depends on: #89
+
+## Goal
+Harden the BAP deployment for production reliability: Multi-AZ for stateful services, Grafana dashboard for health monitoring, alerting rules, and operational documentation.
+
+## Tasks
+
+### High Availability
+- [ ] Enable RDS Multi-AZ (update ACK DBInstance CRD: `multiAZ: true`)
+- [ ] Enable ElastiCache Multi-AZ failover (update ACK ReplicationGroup CRD)
+
+### Grafana Dashboard
+Create Bitergia Health dashboard in `platform-grafana/terraform/`:
+
+- [ ] Add `grafana_folder.bitergia` in `terraform/folders.tf`
+- [ ] Add `grafana_dashboard.bitergia_health` in `terraform/dashboards.tf`
+- [ ] Create `terraform/dashboards/bitergia/bitergia-health.json` with panels:
+
+  **Row: OpenSearch Service**
+  - Cluster status (green/yellow/red), Free storage, CPU, JVM pressure, Indexing rate, Search rate
+
+  **Row: RDS MariaDB**
+  - CPU, Freeable memory, Free storage, Connections, Read/write latency
+
+  **Row: ElastiCache Redis**
+  - Engine CPU, Memory usage %, Cache hit rate, Evictions
+
+  **Row: Application Pods**
+  - Pod status / restarts, Mordred collection status, SortingHat request rate
+
+- [ ] Run `terraform apply` in `platform-grafana/terraform/`
+
+### Alerting
+- [ ] Set up VMAlert rules for critical conditions:
+  - OpenSearch cluster red status
+  - RDS storage < 10% free
+  - ElastiCache memory > 90%
+  - Mordred collection failures (from logs)
+  - Pod CrashLoopBackOff in bitergia namespace
+
+### Security & Ops
+- [ ] Tighten ACK IRSA policies from `*` to specific resource ARNs
+- [ ] Add S3 lifecycle rules for snapshot retention (expire after 90 days)
+- [ ] Enable ECR image scanning and lifecycle policies
+- [ ] Document runbook: how to add a new data source, rotate credentials, restore from backup
+
+## Key Files
+- `platform-grafana/terraform/dashboards.tf`
+- `platform-grafana/terraform/folders.tf`
+- `platform-grafana/terraform/dashboards/bitergia/bitergia-health.json`
+- `bitergia-deploy/aws-resources/` (ACK CRDs to update for Multi-AZ)
+
+=== #89 BAP Phase 6: Cutover, parallel run, and EC2 decommission
+Parent: #84
+Depends on: #88
+
+## Goal
+Switch production traffic to EKS, run in parallel for validation, then decommission the EC2 deployment.
+
+## Tasks
+
+- [ ] Verify Cloudflare Tunnel FQDNs resolve correctly and serve production traffic
+- [ ] Stop Mordred on EC2 (prevent double collection while both environments exist)
+- [ ] Run in parallel for 1 week, monitoring for issues
+- [ ] Terminate EC2 instances:
+  - `thunderbird-all-in-one-0` (m5.xlarge, 13.53.47.3)
+  - `control-node` (t3.micro, 13.49.75.74)
+- [ ] Clean up eu-north-1 resources (VPC, EBS volumes, security groups)
+- [ ] Delete old S3 buckets after confirming data is migrated:
+  - `thunderbird-bap-backups-045a1de7d39a0565`
+  - `thunderbird-bap-sortinghat-334219260e15276a`
+  - `bap-thunderbird-opentofu-state-2026`
+- [ ] Archive `bap-deployment-toolkit` repo (mark as superseded)
+- [ ] Clean up old `thunderbird/` directory in bitergia-deploy (EC2 config no longer needed)
+
+## Verification
+
+- All BAP services healthy on EKS for 1+ week
+- No data collection gaps during cutover
+- EC2 instances terminated
+- eu-north-1 resources cleaned up
+
+=== #88 BAP Phase 5: Migrate OpenSearch and MariaDB data (eu-north-1 → eu-central-1)
+Parent: #84
+Depends on: #87
+
+## Goal
+Migrate 59.3 GiB of OpenSearch snapshot data and MariaDB identity data from the current EC2 deployment in eu-north-1 to managed services in eu-central-1.
+
+## Tasks
+
+### OpenSearch Migration
+
+- [ ] Take final snapshot on current EC2 OpenSearch instance
+- [ ] Sync S3 snapshot bucket from eu-north-1 to eu-central-1 (`aws s3 sync` or cross-region replication)
+- [ ] Register snapshot repository on new Amazon OpenSearch Service domain
+- [ ] Restore snapshot (requires IAM role the domain can assume for S3 access)
+- [ ] Verify: index count, document count, mapping comparison between old and new
+
+### MariaDB Migration
+
+- [ ] SSH to all-in-one EC2, `mysqldump` the sortinghat database
+- [ ] Transfer dump to a host with RDS access in eu-central-1
+- [ ] Import into RDS MariaDB
+- [ ] Verify: SortingHat identity count matches
+
+### End-to-End Validation
+
+- [ ] Trigger a Mordred collection cycle
+- [ ] Verify Mordred logs show successful collection from all 94 repos + 7 data sources
+- [ ] Verify OpenSearch Dashboards show historical data
+- [ ] Verify SortingHat UI shows identity data
+
+## Data Inventory
+
+| Source | Size | Location |
+|--------|------|----------|
+| OpenSearch S3 snapshots | 59.3 GiB (14,240 objects) | `s3://thunderbird-bap-backups-045a1de7d39a0565` (eu-north-1) |
+| OpenSearch live indices | ~21 GB on 200 GB EBS | EC2 `thunderbird-all-in-one-0` (13.53.47.3) |
+| MariaDB (SortingHat) | Small | Same EC2 instance |
+
+## Timeline Estimate
+
+- S3 sync: ~1-2 hours for 59 GiB cross-region
+- OpenSearch restore: ~1-2 hours depending on index count
+- MariaDB: minutes (small dataset)
+- Validation: 1 Mordred collection cycle (60 min)
+
+## OpenSearch Compatibility Notes
+
+- Must match major version between self-managed and managed service
+- Amazon OpenSearch Service uses FGAC — Mordred needs internal user with `indices:*` on `bap_thunderbird_*`
+- Snapshot restore API requires `manage_snapshots` permission
+
+=== #87 BAP Phase 4: Helm charts, application deployment, and observability
+Parent: #84
+Depends on: #86
+
+## Goal
+Write Helm charts for all BAP services, deploy via ArgoCD, configure Cloudflare Tunnels for public access, and set up observability (YACE + VMPodScrape).
+
+## Tasks
+
+### Helm Charts (`bitergia-deploy/charts/`)
+
+- [ ] **mordred/** — Deployment (1 replica, Recreate strategy), ConfigMap (setup.cfg with env var refs), ServiceAccount
+- [ ] **sortinghat/** — Deployment (2 replicas), Service (port 8000), ServiceAccount, Tunnel + TunnelBinding
+- [ ] **sortinghat-worker/** — Deployment (2 replicas), no Service (background workers)
+- [ ] **opensearch-dashboards/** — Deployment (2 replicas), Service (port 5601), Tunnel + TunnelBinding
+- [ ] **yace/** — Deployment (1 replica), ConfigMap (CloudWatch scrape config), ServiceAccount (IRSA for CloudWatch read)
+- [ ] **bitergia/** (umbrella) — Chart.yaml with dependencies on all sub-charts, shared values
+
+### Observability (`bitergia-deploy/observability/`)
+
+- [ ] `vmpodscrape-bitergia.yaml` — scrape bitergia app pods with `prometheus.io/scrape` annotations
+- [ ] `vmpodscrape-yace.yaml` — scrape YACE exporter (300s interval matching CloudWatch period)
+- [ ] Add `prometheus.io/scrape: "true"` annotations to pod templates
+
+### YACE CloudWatch Config
+
+Metrics to scrape:
+- **AWS/ES**: ClusterStatus (green/yellow/red), FreeStorageSpace, CPUUtilization, JVMMemoryPressure, IndexingRate, SearchRate
+- **AWS/RDS**: CPUUtilization, FreeableMemory, FreeStorageSpace, DatabaseConnections, ReadLatency, WriteLatency
+- **AWS/ElastiCache**: CPUUtilization, EngineCPUUtilization, CurrConnections, DatabaseMemoryUsagePercentage, CacheHitRate, Evictions
+
+### ArgoCD Application CRs
+
+- [ ] `bitergia-app.yaml` (wave 3) — Helm umbrella chart
+- [ ] `bitergia-observability.yaml` (wave 3) — VMPodScrape CRDs
+
+### Cloudflare Tunnels
+
+- [ ] OpenSearch Dashboards tunnel (e.g., `bitergia.thunderbird.net`)
+- [ ] SortingHat UI tunnel (e.g., `sortinghat.thunderbird.net`)
+- [ ] Both reference `cloudflare-secrets` ExternalSecret in bitergia namespace
+
+## Verification
+
+- All pods Running in `bitergia` namespace (including YACE)
+- Cloudflare Tunnels created and healthy
+- OpenSearch Dashboards accessible via Cloudflare Tunnel FQDN
+- SortingHat UI accessible via Cloudflare Tunnel FQDN
+- YACE pod exposing CloudWatch metrics on `/metrics`
+- VMAgent scraping bitergia pods — check VictoriaMetrics for `{namespace="bitergia"}` metrics
+- CloudWatch metrics visible (e.g., `aws_es_cluster_status_green`, `aws_rds_cpuutilization`)
+
+## Container Images (shared-services ECR)
+
+```
+826971876779.dkr.ecr.us-east-1.amazonaws.com/bitergia/mordred:0.38.1
+826971876779.dkr.ecr.us-east-1.amazonaws.com/bitergia/sortinghat:0.38.1
+826971876779.dkr.ecr.us-east-1.amazonaws.com/bitergia/opensearch-dashboards:0.38.1
+```
+
+=== #86 BAP Phase 3: Deploy managed services via ACK and wire up ExternalSecrets
+Parent: #84
+Depends on: #85
+
+## Goal
+Provision AWS managed services (OpenSearch, RDS, ElastiCache, S3) via ACK custom resources and wire up ExternalSecrets for credential injection.
+
+## Tasks
+
+- [ ] Write ACK CRD manifests in `bitergia-deploy/aws-resources/`:
+  - `opensearch-domain.yaml` — Amazon OpenSearch Service (t3.medium.search, 200GB gp3, HTTPS, encryption, VPC mode)
+  - `rds-dbsubnetgroup.yaml` + `rds-dbinstance.yaml` — RDS MariaDB (db.t3.small, 20GB, MariaDB 10.11, encrypted, 7-day backups)
+  - `elasticache-subnetgroup.yaml` + `elasticache-replicationgroup.yaml` — ElastiCache Redis (cache.t3.micro, Redis 7.x, transit encryption)
+  - `s3-bucket.yaml` — OpenSearch snapshots (versioning, public access blocked)
+- [ ] Write ExternalSecret manifests in `bitergia-deploy/secrets/`:
+  - `mordred-credentials.yaml` — GitHub tokens, Bugzilla key, Pontoon session, OpenSearch creds
+  - `opensearch-credentials.yaml` — admin password (used by ACK DBInstance masterUserPassword ref)
+  - `mariadb-credentials.yaml` — admin + sortinghat user passwords
+  - `sortinghat-credentials.yaml` — Django secret key, admin credentials
+  - `cloudflare-credentials.yaml` — Cloudflare API token + account ID for tunnels
+- [ ] Write ArgoCD Application CRs in `bitergia-deploy/argocd/apps/`:
+  - `bitergia-aws-resources.yaml` (wave 1)
+  - `bitergia-secrets.yaml` (wave 2)
+- [ ] Deploy and wait for ACK resources to reach Active/Available state
+- [ ] Verify ExternalSecrets sync to K8s Secrets
+
+## Verification
+
+- `kubectl -n bitergia get domain,dbinstance,replicationgroup,bucket` — all show ready conditions
+- `kubectl -n bitergia get externalsecret` — all show SecretSynced
+- Can connect to RDS endpoint from a test pod in the namespace
+- OpenSearch domain is Active with HTTPS endpoint
+
+## Notes
+
+- ACK resources reference VPC subnet IDs and security group IDs from the workload cluster VPC (provided as known values)
+- OpenSearch FGAC: after domain is active, create internal user for Mordred with `indices:*` on `bap_thunderbird_*`
+- All ACK CRDs are namespaced in `bitergia` (allowed by AppProject)
+
+=== #85 BAP Phase 2: Repository setup, credentials, and ECR images
+Parent: #84
+
+## Goal
+Set up the bitergia-deploy repo structure for EKS deployment, rotate and store credentials in Secrets Manager, copy container images to shared-services ECR.
+
+## Tasks
+
+- [ ] Add new directories to bitergia-deploy (`argocd/`, `aws-resources/`, `secrets/`, `charts/`, `config/`, `scripts/`, `observability/`) alongside existing `thunderbird/` directory — **do not modify existing files** (current EC2 deployment must keep working)
+- [ ] Copy `bitergia-data/projects.json` into `bitergia-deploy/config/`
+- [ ] Create sanitized `config/setup.cfg` (replace hardcoded credentials with env var references)
+- [ ] Write `scripts/create-secrets.sh` to populate Secrets Manager
+- [ ] Rotate all exposed credentials: GitHub tokens, Bugzilla API key, Pontoon session, OpenSearch password, SortingHat password
+- [ ] Populate Secrets Manager secrets in eu-central-1 (`mzla/bitergia/*`)
+- [ ] Copy Bitergia container images to shared-services ECR (826971876779) with pinned digests
+- [ ] Set cross-account ECR pull policy for Bitergia account (348831586384)
+- [ ] Create `bitergia` AppProject in `platform-infrastructure/argocd/projects/bitergia.yaml`
+- [ ] Create `bitergia-app-of-apps` Application CR in `platform-infrastructure/argocd/apps/`
+- [ ] Update `platform` project sourceRepos to include `bitergia-deploy`
+- [ ] Check current OpenSearch version and plugins on EC2 for compatibility (`curl http://13.53.47.3:9200`)
+
+## Verification
+
+- `aws secretsmanager list-secrets --region eu-central-1` shows all `mzla/bitergia/*` secrets
+- ECR images pullable from shared-services account
+- Cross-account pull works from Bitergia account
+- AppProject and app-of-apps synced in ArgoCD
+- Existing EC2 deployment still works (no files modified in `thunderbird/`)
+
+## Secrets Manager Layout
+
+| Path | Properties |
+|------|------------|
+| `mzla/bitergia/opensearch` | `admin-password`, `mordred-user`, `mordred-password` |
+| `mzla/bitergia/mariadb` | `admin-password`, `sortinghat-user`, `sortinghat-password` |
+| `mzla/bitergia/sortinghat` | `secret-key`, `admin-username`, `admin-password` |
+| `mzla/bitergia/github` | `api-token` |
+| `mzla/bitergia/bugzilla` | `api-key` |
+| `mzla/bitergia/pontoon` | `session-id` |
+| `mzla/bitergia/cloudflare` | `apiToken`, `accountID` |
+
+=== #84 BAP: Migrate Bitergia Analytics Platform to EKS
+## Epic: Bitergia Analytics Platform (BAP) — EKS Migration
+
+Migrate the Bitergia Analytics Platform from 2 EC2 instances (eu-north-1) to a new EKS workload cluster in mzla-workloads (668807881758, eu-central-1) using ArgoCD and ACK for AWS resource management.
+
+### Background
+
+BAP collects dev metrics from 94+ Thunderbird repos via GrimoireLab. Currently runs on a single m5.xlarge EC2 in the Bitergia account (348831586384). Critical security issues: plaintext credentials in git, public subnet exposure, no MariaDB backup. Bitergia (the company) is closing — Docker Hub images may disappear.
+
+### Architecture
+
+- **Cluster**: New EKS cluster (mzla-eks-workloads01) in mzla-workloads eu-central-1, provisioned via Pulumi
+- **Deployment**: Shared-services ArgoCD (us-east-1) manages workload cluster remotely via cross-account IAM role
+- **AWS resources**: Managed by ACK (OpenSearch Service, RDS MariaDB, ElastiCache Redis, S3)
+- **Namespace isolation**: `bitergia` AppProject restricts to `bitergia` namespace only
+- **Ingress**: Cloudflare Tunnels (not ALB)
+- **Secrets**: AWS Secrets Manager → ESO → K8s Secrets
+- **Images**: Shared-services ECR (cross-account pull)
+- **Observability**: VMAgent + Vector on workload cluster → shared-services vmauth; YACE for CloudWatch metrics; Grafana dashboard
+- **Repo**: Helm charts and ArgoCD apps in `bitergia-deploy` repo
+
+### Phases
+
+- [ ] **Phase 0** — #98: Provision EKS workload cluster (Pulumi: VPC, EKS, IRSA, ArgoCD cross-account role)
+- [ ] **Phase 1** — #99: Bootstrap workload cluster (ArgoCD: ESO, ACK, cert-manager, CF tunnel, VM operator, VMAgent, Vector, Teleport)
+- [ ] **Phase 2** — #85: Repository setup, credentials, ECR images
+- [ ] **Phase 3** — #86: ACK managed services and ExternalSecrets
+- [ ] **Phase 4** — #87: Helm charts, application deployment, observability (YACE + VMPodScrape)
+- [ ] **Phase 5** — #88: Data migration (59 GiB OpenSearch + MariaDB, eu-north-1 → eu-central-1)
+- [ ] **Phase 6** — #89: Cutover and EC2 decommission
+- [ ] **Phase 7** — #90: Hardening (Multi-AZ, Grafana dashboard, alerting, image scanning)
+
+**Parallelism:** #98 and #85 can run in parallel. All others are sequential.
+
+### Planning docs
+
+- `.plans/bitergia-eks-deployment.md` — full deployment plan with Claude Code prompt
+- `docs/bitergia-architecture.md` — current architecture and migration context
+
+=== #82 Deploy Atlantis on ECS in shared-services
+## Description
+
+Deploy Atlantis on ECS Fargate in the shared-services account. Atlantis will be used for CI/CD workflows for Terraform/IaC repos (starting with `thunderbird/platform-grafana`).
+
+## Tasks
+
+- [ ] Deploy Atlantis ECS Fargate service via Pulumi
+- [ ] Configure GitHub App or webhook for repo integration
+- [ ] Networking: VPC, security groups, access to relevant AWS APIs
+- [ ] Secrets via AWS Secrets Manager (GitHub token, webhook secret)
+- [ ] Persistent storage for Atlantis state (EFS or S3)
+- [ ] Access at `atlantis.infra.thunderbird.net` or internal-only
+
+## Dependencies
+
+- Shared-services VPC (#47)
+
+=== #81 platform-grafana CI via Atlantis
+**Parent:** #79 (Observability Phase 2)
+
+## Description
+
+Set up CI for the `thunderbird/platform-grafana` repo using Atlantis. PRs to platform-grafana should trigger Atlantis plan/apply workflows to manage Grafana resources (dashboards, alerting rules, datasources, etc.) as code.
+
+## Dependencies
+
+- #82 — Atlantis deployed on ECS
+
+## Tasks
+
+- [ ] Configure `atlantis.yaml` in platform-grafana
+- [ ] Webhook integration between platform-grafana repo and Atlantis
+- [ ] PR workflow: plan on PR open, apply on merge
+- [ ] Verify end-to-end: PR triggers plan, merge triggers apply
+
+=== #80 Grafana alerting rules and notification channels
+**Parent:** #79 (Observability Phase 2)
+
+## Description
+
+Configure Grafana alerting for core services running on the shared-services EKS cluster. Alerts should be managed as code in `thunderbird/platform-grafana`.
+
+## Tasks
+
+- [ ] Define alert rules for key services (Kubernetes, Traefik, VictoriaMetrics, Keycloak, Teleport, ArgoCD, ESO, ACK)
+- [ ] Configure notification channels (Slack, PagerDuty, email — TBD)
+- [ ] Alert grouping and silencing policies
+- [ ] Verify alerts fire correctly in non-prod / staging context
+
+=== #79 [Epic] Observability Phase 2
+## Overview
+
+Phase 2 of the observability stack. Builds on the foundation deployed in #60 (closed).
+
+## Scope
+
+- Grafana alerting rules and notification channels
+- platform-grafana CI via Atlantis
+- Atlantis deployment on shared-services
+
+## Sub-Issues
+
+- #80 — Grafana alerting rules and notification channels
+- #81 — platform-grafana CI via Atlantis
+- #82 — Deploy Atlantis on ECS in shared-services
+
+=== #77 ArgoCD: GitHub OAuth login shows user as not logged in behind Cloudflare Tunnel
+## Bug
+
+After authenticating via the GitHub OAuth app on ArgoCD (https://argocd.pi.thunderbird.net), the user appears as "not logged in" despite completing the OAuth flow successfully. The Dex server logs confirm `login successful` with correct group claims, but the ArgoCD UI shows no session.
+
+## Root cause
+
+Two Cloudflare zone-level features interfered with the Cloudflare Tunnel traffic:
+
+1. **Cloudflare caching**: The `/api/v1/session/userinfo` API response was cached by Cloudflare's edge (`cf-cache-status: HIT`). The first unauthenticated `{}` response was served to all subsequent requests regardless of auth cookies/headers.
+
+2. **Super Bot Fight Mode**: Injected a Managed Challenge (`cf-mitigated: challenge`) on API calls and OAuth callbacks, blocking the auth flow. Confirmed by `curl` returning `HTTP/2 403` with `cf-mitigated: challenge` header.
+
+Both issues are invisible from the ArgoCD side — server logs show successful login, but the browser never establishes a session.
+
+## Fix
+
+Two Cloudflare rules added to the `thunderbird.net` zone:
+
+### Cache bypass (Caching → Cache Rules)
+- Match: `http.host contains "pi.thunderbird.net"`
+- Action: Bypass cache
+
+### Bot protection skip (Security → Security rules)
+- Match: `http.host eq "argocd.pi.thunderbird.net"` OR `http.host eq "grafana.pi.thunderbird.net"`
+- Action: Skip → All Super Bot Fight Mode Rules
+
+## Lessons learned
+
+- Cloudflare Tunnel traffic passes through all zone-level security and caching rules. Services behind tunnels that use cookies/sessions need explicit bypass rules.
+- The symptom (login succeeds server-side but browser shows "not logged in") is indistinguishable from a cookie `Secure` flag issue, which was a red herring.
+- Always check `cf-cache-status` and `cf-mitigated` response headers when debugging auth behind Cloudflare.
+
+## Documentation
+
+Added to `docs/argocd-bootstrap.md` section 5 with full explanation.
+
+=== #76 Automate ArgoCD AppProject management (currently requires manual kubectl apply)
+## Problem
+
+The `platform` AppProject (`argocd/projects/platform.yaml`) is not managed by app-of-apps or any automated sync. It was applied during initial ArgoCD bootstrap and requires `kubectl apply -f argocd/projects/platform.yaml` whenever `sourceRepos` or other project settings change.
+
+This caused a deployment failure when adding Traefik — the Helm chart repo was added to the YAML but not applied to the cluster, resulting in `application repo not permitted in project` errors.
+
+## Current workaround
+
+Manual `kubectl apply` after editing `argocd/projects/platform.yaml`. Documented in CLAUDE.md.
+
+## Options to automate
+
+1. **Add projects to app-of-apps source path** — have app-of-apps watch `argocd/projects/` in addition to `argocd/apps/`. Needs care to avoid circular management (AppProject must exist before apps that reference it).
+2. **Separate "bootstrap" Application** — a dedicated ArgoCD Application at wave 0 that syncs `argocd/projects/`.
+3. **Include in ArgoCD bootstrap Helm values** — manage the AppProject as part of the ArgoCD Helm chart's `server.additionalProjects` or similar.
+
+=== #75 Teleport ArgoCD app stuck OutOfSync on PVC
+## Bug
+
+The `teleport` ArgoCD Application is permanently OutOfSync. The only out-of-sync resource is the `teleport` PersistentVolumeClaim.
+
+```
+Sync:   OutOfSync
+Health: Healthy
+OutOfSync resource: PersistentVolumeClaim/teleport
+```
+
+This is likely caused by Kubernetes adding default fields to the PVC spec (e.g. `volumeMode`, `dataSource`) that don't match what the Helm chart renders. ArgoCD sees the diff and marks it OutOfSync, but the actual resource is healthy.
+
+## Fix options
+
+1. Add `ignoreDifferences` for PVC fields in the Teleport ArgoCD Application
+2. Enable `ServerSideApply=true` sync option (if not already enabled)
+3. Add specific jqPathExpressions to ignore PVC-defaulted fields
+
+## Environment
+
+- ArgoCD app: `argocd/teleport`
+- Helm chart: teleport-cluster 18.x
+- Namespace: teleport
+
+=== #74 Grafana: GitHub OAuth login shows user as not logged in
+## Bug
+
+After authenticating via the GitHub OAuth app on Grafana (https://grafana.pi.thunderbird.net), the user appears as not logged in despite completing the OAuth flow successfully.
+
+## Expected behavior
+
+After GitHub OAuth redirect, user should be authenticated and see their profile/role in Grafana.
+
+## Environment
+
+- Grafana Helm chart: 8.x (via ArgoCD)
+- Auth: GitHub OAuth (`auth.github` in `grafana.ini`)
+- Allowed org: `thunderbird`
+- Role mapping: `@thunderbird/platform-infrastructure` → Admin, others → Viewer
+- OAuth credentials: ExternalSecret from AWS Secrets Manager (`grafana-oauth`)
+
+## To investigate
+
+- Check Grafana pod logs for OAuth callback errors
+- Verify the GitHub OAuth App callback URL matches `https://grafana.pi.thunderbird.net/login/github`
+- Check if the `grafana-oauth` Secret has correct `GF_AUTH_GITHUB_CLIENT_ID` and `GF_AUTH_GITHUB_CLIENT_SECRET`
+- Verify `root_url` in `grafana.ini` matches the actual URL (cookie domain issues)
+
+=== #73 Add OpenTelemetry tracing pipeline
+## Summary
+
+Add a tracing pipeline to the observability stack on mzla-eks-shared01. This was deferred from #60/#70 (PR #72) because no services currently emit traces.
+
+## Requirements
+
+- Deploy an OTEL Collector or Tempo for trace ingestion and storage
+- Instrument platform services with OpenTelemetry SDKs
+- Add a trace datasource to Grafana (Tempo or Jaeger)
+- Route trace ingestion through vmauth with bearer-token auth
+- Consider trace-to-metrics and trace-to-logs correlation
+
+## Context
+
+The metrics and logging stack is live (VictoriaMetrics, VictoriaLogs, Vector, vmauth). Tracing is the remaining pillar. This should be picked up once at least one service is instrumented with OTEL to validate the pipeline end-to-end.
+
+See `docs/observability.md` for the current architecture.
+
+=== #71 Grafana dashboards: Kubernetes, Teleport, VictoriaMetrics, and core services
+**Parent:** #60 (Observability Stack)
+
+## Description
+
+Provision Grafana dashboards for all core services in the shared-services EKS cluster. Dashboards should be managed as code (ConfigMaps or Grafana provisioning) and deployed via ArgoCD.
+
+## Dashboards
+
+### Kubernetes
+- [ ] Cluster overview (nodes, pods, resource utilization)
+- [ ] Namespace breakdown
+- [ ] Pod/container resource usage
+- [ ] Persistent volume usage
+- [ ] CoreDNS
+
+### Teleport
+- [ ] Active sessions and connections
+- [ ] Auth and audit events
+- [ ] Backend latency and errors
+
+### VictoriaMetrics
+- [ ] Ingestion rate and active time series
+- [ ] Query performance
+- [ ] Storage and retention
+
+### Traefik
+- [ ] Request rate, latency, error rate by entrypoint/router
+- [ ] TLS certificate status
+
+### ArgoCD
+- [ ] Application sync status
+- [ ] Repo server and controller health
+
+### Keycloak
+- [ ] Login success/failure rates
+- [ ] Active sessions
+- [ ] Request latency
+
+### Other Core Services
+- [ ] External Secrets Operator — sync status and errors
+- [ ] ACK controllers — reconciliation status
+- [ ] external-dns — record sync status
+- [ ] aws-load-balancer-controller — reconciliation and target health
+
+## Tasks
+
+- [ ] Source community/upstream dashboards where available (Grafana dashboard IDs)
+- [ ] Package dashboards as ConfigMaps with `grafana_dashboard` label for sidecar provisioning
+- [ ] Deploy via ArgoCD
+- [ ] Verify all dashboards load with live data
+
+=== #70 Metrics scraping: Teleport, VictoriaMetrics, and core cluster services
+**Parent:** #60 (Observability Stack)
+
+## Description
+
+Configure VictoriaMetrics to scrape metrics from all core services running on the shared-services EKS cluster.
+
+## Scrape Targets
+
+- [ ] Teleport (`/v1/webapi/ping` + Prometheus metrics endpoint)
+- [ ] VictoriaMetrics (self-monitoring)
+- [ ] Traefik
+- [ ] ArgoCD (application-controller, repo-server, server)
+- [ ] External Secrets Operator
+- [ ] ACK controllers
+- [ ] external-dns
+- [ ] aws-load-balancer-controller
+- [ ] metrics-server
+- [ ] cluster-autoscaler / Karpenter
+- [ ] Keycloak (`/metrics`)
+- [ ] CoreDNS
+- [ ] kube-state-metrics (deploy if not present)
+- [ ] node-exporter (deploy if not present)
+
+## Tasks
+
+- [ ] Deploy kube-state-metrics and node-exporter via ArgoCD if not already present
+- [ ] Configure VMServiceScrape / ServiceMonitor CRDs for each target
+- [ ] Verify all targets appear as UP in VictoriaMetrics targets page
+
+=== #65 [Epic] Infosec Remediation
+## Overview
+
+Parent tracking issue for security review findings and remediation work across Thunderbird infrastructure.
+
+## Cross-Repo Issues
+
+### Cloud Privilege Escalation Paths (High)
+- thunderbird/tbpro-add-on#245
+  - AdministratorAccess on GitHub OIDC roles
+  - Inline AdministratorAccess via external AWS account trust
+  - Privilege escalation via overly broad IAM policy + wildcard actions
+
+### Lack of Cloud-Native Workload Separation (High)
+- thunderbird/tbpro-add-on#100
+  - No environment isolation across AWS accounts (test/stage/prod)
+  - Flagged per AWS Well-Architected Framework guidance
+
+## Related
+
+- #42 — AWS org restructuring addresses account separation and IAM hardening (Phases 0A–0C, 4A–4B)
+
+=== #64 Deploy Teleport with GitHub Auth on EKS
+**Epic:** #42
+
+## Description
+
+Deploy Teleport on the shared-services EKS cluster via ArgoCD for secure access to infrastructure resources. Authentication via GitHub OAuth (Thunderbird org).
+
+## DNS
+
+- `teleport.infra.thunderbird.net` (Route53, Traefik IngressRoute)
+
+## Dependencies
+
+- #50 — ArgoCD, Traefik, and ESO deployed
+
+## Tasks
+
+- [ ] Deploy Teleport via ArgoCD (Helm chart)
+- [ ] Configure GitHub OAuth authentication (restrict to Thunderbird GitHub org)
+- [ ] Secrets via ESO → AWS Secrets Manager
+- [ ] Traefik IngressRoute for `teleport.infra.thunderbird.net`
+- [ ] ACM or Cloudflare origin cert for TLS
+- [ ] Configure RBAC roles and access policies
+
+### Verification
+- [ ] Teleport Web UI accessible at `teleport.infra.thunderbird.net`
+- [ ] GitHub OAuth login works for Thunderbird org members
+- [ ] Non-org members denied access
+
+=== #62 Add logging account Pulumi stack for GuardDuty org config
+## Context
+
+Phase 0B deployed GuardDuty delegated admin to mzla-logging (556102479461) via the management account stack (`identity-center/`). However, `GuardDuty OrganizationConfiguration` (auto-enable for member accounts) must be called from the delegated admin account, not the management account. The Security OU SCP also blocks GuardDuty modifications via cross-account AssumeRole.
+
+Auto-enable was configured manually via CLI as a stopgap:
+```bash
+AWS_PROFILE=mzla-logging aws guardduty update-organization-configuration \
+  --detector-id bece935f192998a90fb5d97c6f3280b3 \
+  --auto-enable-organization-members ALL \
+  --region us-east-1
+```
+
+This needs to be codified in IaC.
+
+## Task
+
+Create a new Pulumi project at `logging/` that runs with logging account credentials (`AWS_PROFILE=mzla-logging`). This stack manages resources that must be owned by the logging account.
+
+### Resources to manage
+
+1. **GuardDuty OrganizationConfiguration** — `aws.guardduty.OrganizationConfiguration` with `auto_enable_organization_members="ALL"`, using the existing detector in the logging account
+2. **GuardDuty detector** — import the existing detector (ID from `aws guardduty list-detectors --profile mzla-logging`)
+
+### Future resources (not in scope, but design for extensibility)
+- SecurityHub org configuration
+- Config aggregator delegated admin settings
+
+### Implementation notes
+
+- Follow existing patterns: `tb_pulumi.ThunderbirdPulumiProject`, config-driven from `config.prod.yaml`, module pattern with `create_*()` functions
+- Stack config: `aws:profile: mzla-logging`, `aws:region: us-east-1`
+- Don't set `aws:profile` in committed `Pulumi.prod.yaml` (breaks CI) — use `AWS_PROFILE` env var
+- The existing detector must be **imported**, not created: `pulumi import aws:guardduty/detector:Detector <name> <detector-id>`
+- Reference `identity-center/` stack patterns for project structure
+- See `CLAUDE.md` for conventions, `HANDOFF.md` for account/OU IDs
+
+=== #60 [Epic] Observability Stack on Shared-Services EKS
+## Overview
+
+Stand up a production observability stack on the shared-services EKS cluster, providing metrics collection, dashboards, and secure external access.
+
+**Program:** Platform Infrastructure
+**Epic:** Observability
+**Milestone:** Observability
+
+## DNS Conventions
+
+- **`pi.thunderbird.net`** — Cloudflare-hosted assets (e.g., `grafana.pi.thunderbird.net`)
+- **`infra.thunderbird.net`** — AWS/Traefik-hosted services (e.g., `sso.infra.thunderbird.net`)
+
+Grafana and other o11y services fronted by Cloudflare will live under `pi.thunderbird.net`. Services like Keycloak that are served directly via Traefik on EKS remain under `infra.thunderbird.net`.
+
+## Dependencies
+
+This effort depends on the following issues being completed first:
+
+- [ ] #46 — Phase 1A: Add reusable EKS component to tb_pulumi
+- [ ] #47 — Phase 1B: Shared-services VPC and networking in us-east-1
+- [ ] #48 — Phase 1C: Deploy EKS cluster with Graviton nodes, private endpoint, Client VPN
+- [ ] #50 — Phase 1E: Bootstrap ArgoCD on EKS
+
+## Components
+
+### VictoriaMetrics
+- Deploy VictoriaMetrics (single or cluster mode) for metrics ingestion and storage
+- Prometheus-compatible scrape and query endpoints
+- Retention and storage sizing for shared-services workloads
+
+### Grafana + GitHub App Auth
+- Deploy Grafana via ArgoCD
+- Configure GitHub OAuth App for authentication (restrict to `@thunderbird.net` org)
+- Pre-provision datasources (VictoriaMetrics) and baseline dashboards
+- Accessible at `grafana.pi.thunderbird.net` (Cloudflare-proxied)
+
+### Cloudflare Operator
+- Deploy [cloudflare-operator](https://github.com/adyanth/cloudflare-operator) for automated DNS record management
+- Manage Cloudflare DNS records for services under `pi.thunderbird.net`
+
+### Traefik
+- Deploy Traefik as the ingress controller
+- TLS termination via cert-manager or Cloudflare origin certs
+- IngressRoute resources for Grafana and other o11y endpoints
+
+### External Secrets Operator (ESO)
+- Deploy ESO to sync secrets from AWS Secrets Manager into Kubernetes
+- IRSA-backed authentication (role created in #50)
+- SecretStore + ExternalSecret resources for Grafana credentials, OAuth secrets, Cloudflare API tokens, etc.
+
+## Milestones
+
+This epic spans the **Observability** milestone.
+
+## Tasks
+
+- [ ] Deploy ESO with IRSA and configure SecretStore for AWS Secrets Manager
+- [x] Deploy Cloudflare Operator and configure DNS automation for `pi.thunderbird.net`
+- [x] Deploy Traefik with TLS and IngressRoute CRDs
+- [x] Deploy VictoriaMetrics (sizing TBD based on workload count)
+- [x] Deploy Grafana with GitHub OAuth, VictoriaMetrics datasource, and baseline dashboards
+- [ ] Verify end-to-end: metrics flowing → VictoriaMetrics → Grafana dashboards accessible at `grafana.pi.thunderbird.net`
+
+=== #59 Clean up TB Legacy resources in unapproved regions
+## Background
+
+Cost Explorer analysis (March 2026 MTD) shows TB Legacy (768512802988) has spend across 12+ regions outside the primary deployment regions. The region-deny SCP currently excludes the Workloads OU to avoid breaking these resources.
+
+## Spend by region (outside allowed SCP regions)
+
+| Region | Cost (MTD $) | Likely cause |
+|--------|-------------|--------------|
+| eu-west-1 (Ireland) | $628.76 | Real workloads — added to SCP allow list |
+| ap-northeast-1 (Tokyo) | $119.00 | CloudFront / edge / default VPC |
+| ap-southeast-1 (Singapore) | $62.95 | CloudFront / edge / default VPC |
+| sa-east-1 (São Paulo) | $46.22 | CloudFront / edge / default VPC |
+| ap-south-1 (Mumbai) | $18.65 | CloudFront / edge / default VPC |
+| eu-west-2 (London) | $18.23 | CloudFront / edge / default VPC |
+| ap-southeast-2 (Sydney) | $15.58 | CloudFront / edge / default VPC |
+| us-west-1 (N. California) | $11.36 | cloud-security-iac Config bucket + default VPC |
+| ca-central-1 (Canada) | $11.18 | CloudFront / edge / default VPC |
+| af-south-1 (Cape Town) | $5.38 | CloudFront / edge / default VPC |
+| me-south-1 (Bahrain) | $2.97 | CloudFront / edge / default VPC |
+| ap-northeast-2 (Seoul) | $0.13 | CloudFront / edge / default VPC |
+
+**Total blocked-region spend: ~$940/mo**
+
+## Tasks
+
+- [ ] Identify what's running in each region (likely GuardDuty/Config from cloud-security-iac, default VPCs, CloudFront edge)
+- [ ] Delete default VPCs in unused regions
+- [ ] Decommission cloud-security-iac per-region stacks once org-level security is delegated to mzla-logging
+- [ ] Once cleaned up, apply region-deny SCP to Workloads OU
+
+=== #56 Phase 4B: IAM hardening, deny user creation, decommission legacy IAM
+**Epic:** #42
+**Related:** #12, #10
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Harden IAM: deny human IAM user creation via SCP, decommission legacy IAM users, begin CI/CD OIDC migration.
+
+## Tasks
+
+- [ ] SCP: deny `iam:CreateUser` and `iam:CreateAccessKey` for human use in member accounts
+- [ ] Decommission legacy IAM users (after 2-week parallel-run with SSO)
+- [ ] Document break-glass: management account → `sts:AssumeRole` → OrganizationAccountAccessRole
+- [ ] Begin CI/CD OIDC migration (#10 — longest tail, weeks 5-8+)
+
+## Addresses
+
+- #12 — IAM hardening: disable IAM users, deny creation, break-glass procedure
+- #10 — CI/CD OIDC migration (begins here, tracked separately)
+
+## Verification
+
+- [ ] SCP blocks `iam:CreateUser` in member accounts
+- [ ] Legacy IAM users disabled/deleted
+- [ ] Break-glass procedure tested end-to-end
+- [ ] At least one repo migrated to OIDC for CI/CD
+
+=== #55 Phase 4A: Switch Identity Center to Keycloak external IdP
+**Epic:** #42
+**Related:** #5
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Execute the cutover: switch Identity Center identity source from directory to Keycloak external IdP.
+
+## Pre-Cutover Checklist
+
+- [ ] SCIM sync verified — all users and groups present in Identity Center
+- [ ] End-to-end login tested: SSO portal → Keycloak → Google → AWS credentials
+- [ ] All permission set assignments working with SCIM groups
+- [ ] Break-glass procedure documented (OrganizationAccountAccessRole from mzla-root)
+- [ ] IAM users still active as parallel fallback
+- [ ] Team notified, maintenance window scheduled
+
+## Warning
+
+⚠️ Switching identity source **deletes all directory users**. This is a hard cutover, not gradual. Schedule during a maintenance window with the team on call.
+
+## Verification
+
+- [ ] All team members can login via SSO
+- [ ] All account/role assignments work
+- [ ] Break-glass procedure tested
+
+=== #54 Phase 3B: Permission sets and account assignments for all accounts
+**Epic:** #42
+**Related:** #8, #5
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Update Pulumi Identity Center code to work with SCIM-provisioned groups and add new accounts to the assignment matrix.
+
+## Tasks
+
+- [ ] Update `identity_center.py`: look up SCIM groups via `identitystore.get_group()` (instead of creating them)
+- [ ] Remove `users.py` calls from `__main__.py` (SCIM handles users)
+- [ ] Add `mzla-logging` and `shared-services` to assignment matrix:
+  - `platform-admins` → AdministratorAccess
+  - `read-only` → ReadOnlyAccess
+- [ ] `pulumi preview` validates all permission set assignments
+- [ ] End-to-end test: SSO portal → Keycloak → Google → AWS console
+
+## Post-Federation Ownership
+
+| Resource | Managed by |
+|---|---|
+| Permission sets | Pulumi |
+| Account assignments | Pulumi |
+| Groups | Keycloak/SCIM |
+| Users | Keycloak/SCIM |
+
+=== #53 Phase 3A: SAML federation and SCIM provisioning to Identity Center
+**Epic:** #42
+**Related:** #8, #9
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Federate Keycloak to AWS Identity Center via SAML and provision users/groups via SCIM.
+
+## Tasks
+
+- [ ] Export Keycloak SAML IdP metadata from `aws-sso` realm
+- [ ] Switch Identity Center identity source to "External identity provider"
+- [ ] Upload Keycloak metadata, configure attribute mappings
+- [ ] Enable SCIM automatic provisioning → get endpoint + token
+- [ ] Configure Keycloak SCIM client pointing to Identity Center endpoint
+- [ ] Create groups in Keycloak matching existing names:
+  - `platform-admins`, `legacy-admins`, `bitergia-admins`, `data-engineers`, `quicksight-users`, `read-only`
+- [ ] Assign users to groups in Keycloak
+- [ ] Verify SCIM sync populates Identity Center with all users and groups
+
+## Addresses
+
+- #8 — IAM Identity Center configuration and user onboarding
+- #9 — Keycloak federation phase
+
+## Warning
+
+Switching identity source **deletes all directory users**. Must have SCIM working and tested first.
+
+=== #52 Phase 2B: Configure aws-sso realm, Google OAuth, SAML client
+**Epic:** #42
+**Related:** #9
+**Branch:** `feat/aws-sso-keycloak-eks`
+**Blocker:** MoCo must provide Google OAuth 2.0 client credentials
+
+## Description
+
+Configure the `aws-sso` Keycloak realm with Google OAuth social login and SAML client for Identity Center.
+
+## Tasks
+
+- [ ] Create `aws-sso` realm (managed as code — JSON export in repo)
+- [ ] **Google Identity Provider:**
+  - Hosted domain: `thunderbird.net`
+  - Scopes: `openid email profile`
+  - Redirect URI: `https://sso.infra.thunderbird.net/realms/aws-sso/broker/google/endpoint`
+  - First login flow: auto-create Keycloak user
+- [ ] **Local accounts** for external collaborators (STX, Bitergia, contractors)
+- [ ] **SAML Client** for AWS Identity Center:
+  - Sign assertions: RSA-SHA256
+  - Name ID format: email
+  - Attribute mappings: email, firstName, lastName
+- [ ] Verify Google OAuth login works
+- [ ] Verify SAML metadata downloadable
+
+## Blocker
+
+Google OAuth requires OAuth 2.0 client credentials from Google Workspace admin. MoCo manages `thunderbird.net` Google Workspace — need them to create the OAuth client or grant delegated access. **Request early.**
+
+=== #51 Phase 2A: Deploy HA Keycloak on EKS via ArgoCD
+**Epic:** #42
+**Related:** #9
+
+## Description
+
+Deploy HA Keycloak on EKS via ArgoCD Application. RDS PostgreSQL is provisioned via ACK (AWS Controllers for Kubernetes) rather than Pulumi.
+
+## Architecture
+
+```
+Internet → Traefik (sso.infra.thunderbird.net)
+  → EKS Ingress → keycloak namespace
+    → 3 pods (one per AZ, anti-affinity)
+    → Headless svc for JGroups (7800)
+    → ClusterIP svc for HTTP (8080)
+  → RDS PostgreSQL via ACK (Multi-AZ)
+```
+
+## Dependencies
+
+- #50 — ArgoCD, Traefik, ESO, and ACK deployed
+
+## Tasks
+
+### RDS via ACK
+- [ ] ACK `DBInstance` manifest: PostgreSQL 16, db.m7g.large (Graviton), Multi-AZ
+- [ ] 20 GB gp3 with auto-scaling
+- [ ] KMS encryption at rest, 7-day backup retention
+- [ ] Security group: 5432 from EKS worker node SG only
+- [ ] Private subnets only
+- [ ] ACM certificate: `sso.infra.thunderbird.net` (DNS validation via Route53)
+
+### Keycloak
+- [ ] Create ArgoCD Application manifest + Helm values
+- [ ] Keycloak image: `quay.io/keycloak/keycloak:26.x` (multi-arch ARM64)
+- [ ] 3 replicas with topology spread + pod anti-affinity
+- [ ] PDB: minAvailable 2
+- [ ] Clustering: JDBC_PING
+- [ ] Secrets via External Secrets Operator → AWS Secrets Manager
+- [ ] Tolerations for `dedicated=keycloak:NoSchedule` taint
+- [ ] Resource requests/limits tuned for m7g.xlarge
+- [ ] Traefik IngressRoute for `sso.infra.thunderbird.net`
+
+### Verification
+- [ ] RDS instance created and healthy via ACK
+- [ ] Keycloak admin console accessible at `sso.infra.thunderbird.net`
+- [ ] `/health/ready` returns 200
+- [ ] Pods in 3 different AZs (`kubectl get pods -o wide`)
+- [ ] Cluster formation verified (Keycloak admin → cluster info)
+
+=== #50 Phase 1E: Bootstrap ArgoCD on EKS
+**Epic:** #42
+
+## Description
+
+Bootstrap ArgoCD on EKS via Pulumi Helm release (chicken-and-egg: ArgoCD can't deploy itself). ArgoCD then manages cluster services via App-of-Apps pattern.
+
+## Dependencies
+
+- #48 — EKS cluster deployed
+
+## Tasks
+
+- [ ] Manually deploy ArgoCD Helm with GitHub App for authentication. Secrets should be in AWS Secrets Manager.
+- [ ] Create `shared-services/irsa.py` — IRSA roles for ArgoCD, LB controller, external-dns, ESO, ACK
+- [ ] Configure App-of-Apps to manage:
+  - Traefik (ingress controller)
+  - External Secrets Operator (ESO)
+  - ACK (AWS Controllers for Kubernetes) — for managing AWS resources (RDS, etc.)
+  - aws-load-balancer-controller
+  - external-dns (Route53 `infra.thunderbird.net`)
+  - metrics-server
+  - cluster-autoscaler (or Karpenter)
+- [ ] ArgoCD accessible at `argocd.infra.thunderbird.net`
+
+### Verification
+- [ ] ArgoCD UI accessible
+- [ ] App-of-Apps synced and healthy
+- [ ] All cluster services running (Traefik, ESO, ACK, LB controller, external-dns, metrics-server)
+
+=== #49 Phase 1D: Route53 zone for infra.thunderbird.net
+**Epic:** #42
+
+## Description
+
+Create the Route53 hosted zone for `infra.thunderbird.net` in the shared-services account. NS delegation from Cloudflare will be done manually.
+
+## DNS Conventions
+
+- **`infra.thunderbird.net`** — AWS/Traefik-hosted services (Route53 authoritative)
+- **`pi.thunderbird.net`** — Cloudflare-hosted assets (stays in Cloudflare)
+
+## Dependencies
+
+- #47 — Shared-services VPC and networking
+
+## Tasks
+
+- [ ] Create Route53 hosted zone: `infra.thunderbird.net` in shared-services account (Pulumi)
+- [ ] Manually delegate NS records in Cloudflare → Route53 name servers
+- [ ] Verify zone is resolving correctly
+
+=== #48 Phase 1C: Deploy EKS cluster with Graviton nodes and public+private endpoint
+**Epic:** #42
+
+## Description
+
+Deploy EKS 1.35 cluster with public+private control plane endpoints and Graviton ARM64 node groups.
+
+Cluster name: `mzla-shared01`
+
+## Cluster Spec
+
+- EKS 1.35, public + private endpoints, KMS encryption for etcd
+- Logging: api, audit, authenticator, controllerManager, scheduler
+
+### Node Groups (all Graviton ARM64 unless noted)
+
+| Group | Instance | Min/Max/Desired | Purpose |
+|---|---|---|---|
+| system | m7g.xlarge | 2/4/2 | CoreDNS, kube-proxy, LB controller, ESO |
+| keycloak | m7g.xlarge | 3/6/3 | Dedicated Keycloak pods (tainted) |
+| general-arm64 | m7g.xlarge | 2/8/2 | ARM64 workloads |
+| general-amd64 | m7a.large | 0/8/0 | Future x86 workloads |
+
+### Node Scheduling & HA
+
+- `topologySpreadConstraints`: maxSkew 1, zone topology, DoNotSchedule
+- Pod anti-affinity: required, hostname topology (no 2 Keycloak pods on same node)
+- PDB: minAvailable 2 for Keycloak
+- keycloak taint: `dedicated=keycloak:NoSchedule`
+
+### EKS Managed Add-ons (Pulumi)
+
+- vpc-cni, kube-proxy, coredns, aws-ebs-csi-driver (gp3 default StorageClass)
+
+## Dependencies
+
+- #46 — EKS component in tb_pulumi
+- #47 — Shared-services VPC
+- #49 — Route53 `infra.thunderbird.net` zone
+
+## Tasks
+
+- [ ] Create `shared-services/eks_cluster.py` using `tb_pulumi.eks.EksCluster`
+- [ ] Configure public + private endpoint access
+- [ ] Configure all 4 node groups with correct instance types, AMI types, labels, taints
+- [ ] Deploy EKS managed add-ons with gp3 StorageClass
+- [ ] Verify: `kubectl get nodes -o wide` shows ARM64 nodes across 3 AZs
+
+=== #47 Phase 1B: Shared-services VPC and networking in us-east-1
+**Epic:** #42
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Create the shared-services Pulumi project and deploy VPC networking in us-east-1.
+
+**Why us-east-1:** Identity Center is pinned here (ssoins-7223621a80b5bc7b). Co-locating keeps SCIM, SSO portal, and Keycloak in one region.
+
+## Tasks
+
+- [ ] Create `shared-services/` Pulumi project (Pulumi.yaml, config.prod.yaml, requirements.txt)
+- [ ] Deploy VPC using `tb_pulumi.network.MultiTierVpc` — CIDR `10.100.0.0/16`
+- [ ] Public subnets: /20 x3 AZs (us-east-1a,b,c) — ALB/NLB, NAT GW
+- [ ] Private subnets: /18 x3 AZs — EKS nodes + pods, RDS
+- [ ] 3 NAT Gateways (one per AZ — BCP)
+- [ ] VPC endpoints: ECR API, ECR DKR, S3, CloudWatch Logs, STS, Secrets Manager
+- [ ] Verify subnets span 3 AZs, endpoints reachable
+
+=== #46 Phase 1A: Add reusable EKS component to tb_pulumi
+**Epic:** #42
+**Destination repo:** `thunderbird/pulumi` (issue tracked here)
+
+## Description
+
+Build a reusable `tb_pulumi.eks.EksCluster` component following existing patterns (`ThunderbirdComponentResource` base class, config-driven, tagging, resource protection).
+
+## Tasks
+
+- [ ] Create `tb_pulumi/eks.py` with `EksCluster` component
+- [ ] Wraps `pulumi_eks.Cluster` with tb_pulumi conventions
+- [ ] Managed node groups with ARM64/x86 selection (`ami_type`)
+- [ ] EKS managed add-ons (vpc-cni, kube-proxy, coredns, ebs-csi-driver with gp3 default)
+- [ ] KMS envelope encryption for etcd secrets
+- [ ] Cluster logging configuration
+- [ ] OIDC provider for IRSA (IAM Roles for Service Accounts)
+- [ ] Private/public endpoint configuration
+- [ ] EBS CSI StorageClass defaulting to gp3
+- [ ] Update `requirements.txt` (add `pulumi-eks`, `pulumi-kubernetes`)
+- [ ] Tests pass; `pulumi preview` with test config validates
+
+## Design Notes
+
+- Follow same patterns as `AutoscalingFargateCluster` in `fargate.py`
+- Config-driven via `config.{stack}.yaml`
+- Support resource protection (`protect_resources`)
+
+=== #45 Phase 0C: Baseline and OU-level Service Control Policies
+**Epic:** #42
+**Related:** #14, #7, #4
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Deploy baseline SCPs at the org root and OU-specific SCPs for Security and Sandbox OUs.
+
+## Tasks
+
+- [ ] Extend `scps.py` to support OU-level SCP attachment (currently root-only)
+- [ ] **Root SCPs** (already written): region-deny, logging-protect, root-deny, org-leave-deny
+- [ ] **Security OU SCP:** deny all non-logging/audit actions
+- [ ] **Sandbox OU SCP:** deny expensive services, enforce tagging
+- [ ] S3 account-level public access blocks on all accounts (#4 partial)
+- [ ] Update `config.prod.yaml` with OU SCP definitions
+- [ ] Validate with SCP simulator
+
+## Addresses
+
+- Closes #7 — Deploy baseline SCPs
+- Partially addresses #4 — S3 public access blocks (stale key cleanup is manual)
+
+=== #44 Phase 0B: Centralized logging — CloudTrail, Config, GuardDuty delegation
+**Epic:** #42
+**Related:** #14, #6, #11
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Migrate all logging and security monitoring resources to the dedicated mzla-logging account.
+
+## Tasks
+
+- [ ] Update `logging.account_id` in `config.prod.yaml` to mzla-logging account
+- [ ] Update `logging_account.py` — CloudTrail S3 bucket + KMS key target logging account
+- [ ] Config snapshots bucket → logging account
+- [ ] Deploy org-wide CloudTrail trail (#6)
+- [ ] Enable GuardDuty org-wide + delegate admin to logging account (#11)
+- [ ] Enable AWS Config org-wide recorder (#11)
+- [ ] Verify CloudTrail logs land in logging account S3 bucket
+- [ ] Verify GuardDuty findings visible from logging account
+
+## Addresses
+
+- Closes #6 — Deploy org-wide CloudTrail via Pulumi
+- Closes #11 — Enable GuardDuty and Config org-wide
+
+=== #43 Phase 0A: Create OU hierarchy, logging account, and shared-services account
+**Epic:** #42
+**Related:** #14
+**Branch:** `feat/aws-sso-keycloak-eks`
+
+## Description
+
+Create the AWS Organization OU structure and two new accounts.
+
+```
+Root (r-xxxx)
+├── Security OU        → mzla-logging (NEW)
+├── Infrastructure OU  → shared-services (NEW)
+├── Workloads OU       → thunderbird-legacy, bitergia
+├── Data OU            → mzla-business-data
+└── Sandbox OU         → ai-experiments
+```
+
+## Tasks
+
+- [ ] Create `identity-center/org_structure.py` with OU resources (`aws.organizations.OrganizationalUnit`)
+- [ ] Create `mzla-logging` account in Security OU
+- [ ] Create `shared-services` account in Infrastructure OU
+- [ ] Move existing accounts to their respective OUs
+- [ ] Update `config.prod.yaml` with new account IDs and OU definitions
+- [ ] Update `__main__.py` to call org_structure module
+- [ ] Create `CLAUDE.md` with project context
+- [ ] `pulumi preview` validates all resources
+- [ ] Run `discover-mzla-org.py` post-deploy to verify
+
+## Notes
+
+- Management account (mzla-root) stays at root — AWS restriction
+- Account creation requires unique root email — use `aws-admin+logging@thunderbird.net` etc.
+- Moving accounts to OUs is non-disruptive
+
+=== #42 [Epic] AWS SSO + Keycloak
+## Overview
+
+Restructure the MZLA AWS Organization with proper OU hierarchy, centralized logging, and a shared-services EKS cluster hosting HA Keycloak as the IDP for AWS IAM Identity Center (SSO). Users authenticate via Google OAuth through Keycloak.
+
+**Related to:** #14 (AWS Security Posture & Identity Center Migration)
+
+## Goals
+
+1. **AWS Organization best practices:** OU hierarchy, dedicated logging account, baseline SCPs
+2. **Shared-services infrastructure:** Multi-tenant EKS cluster (Graviton/ARM64), public+private endpoint
+3. **Centralized identity:** Keycloak → SAML/SCIM → Identity Center, Google OAuth for @thunderbird.net
+4. **GitOps:** ArgoCD for Kubernetes workloads, Pulumi for infrastructure
+5. **IAM hardening:** Zero IAM users for humans, zero long-lived access keys
+
+## Dependency Chain
+
+```
+#46 EKS component in tb_pulumi
+ │
+ ├──► #47 Shared-services VPC ──┐
+ │                               ├──► #48 EKS cluster (shared-services)
+ └──► #49 Route53 infra.t.net ──┘
+                                       │
+                                       ▼
+                                 #50 ArgoCD bootstrap
+                                 (installs Traefik, ESO, ACK)
+                                       │
+                              ┌────────┼────────┐
+                              ▼        ▼        ▼
+                         #51 Keycloak  #64 Teleport  #60 Observability
+```
+
+**Note:** #47 (VPC) and #49 (Route53 zone) can be worked on in parallel — both depend on #46 only.
+
+### DNS Conventions
+- **`infra.thunderbird.net`** — Route53 (delegated from Cloudflare), AWS/Traefik-hosted services
+- **`pi.thunderbird.net`** — Cloudflare-hosted assets
+
+## Epic #14 Sub-Issues Addressed
+
+| #14 Sub-Issue | Phase | Coverage |
+|---|---|---|
+| #6 CloudTrail | 0B | Full |
+| #7 SCPs | 0C | Full |
+| #11 GuardDuty + Config | 0B | Full |
+| #4 Quick wins | 0C | Partial |
+| #9 Keycloak federation | 2A-3A | Full |
+| #8 Identity Center config | 3A-3B | Full |
+| #5 MFA enforcement | 3B, 4B | Full |
+| #12 IAM hardening | 4A-4B | Full |
+| #10 CI/CD OIDC | 4B+ | Full |
+
+## Phases
+
+- [x] Phase 0A: OU hierarchy, logging + shared-services accounts
+- [x] Phase 0B: Centralized logging (CloudTrail, Config, GuardDuty)
+- [x] Phase 0C: Baseline + OU-level SCPs
+- [x] Phase 1A: tb_pulumi EKS component (#46)
+- [x] Phase 1B: Shared-services VPC (#47)
+- [x] Phase 1C: EKS cluster, Graviton nodes, public+private endpoint (#48)
+- [x] Phase 1D: Route53 `infra.thunderbird.net` zone (#49)
+- [x] Phase 1E: ArgoCD bootstrap + Traefik, ESO, ACK (#50)
+- [x] Teleport with GitHub Auth (#64)
+- [x] Observability stack (#60)
+- [ ] Phase 2A: Keycloak HA deployment via ArgoCD (#51)
+- [ ] Phase 2B: aws-sso realm, Google OAuth, SAML client
+- [ ] Phase 3A: SAML + SCIM federation to Identity Center
+- [ ] Phase 3B: Permission sets + account assignments
+- [ ] Phase 4A: Cutover — switch Identity Center to external IdP
+- [ ] Phase 4B: IAM hardening, decommission legacy users
+
+## Key Decisions
+
+- Separate Keycloak instance on EKS (us-east-1), not adding to existing ECS Fargate Keycloak
+- ARM64 (Graviton) for all node groups; dual-arch support for future workloads
+- EKS 1.35, EBS CSI defaults to gp3
+- Public+private EKS control plane (no Client VPN)
+- ArgoCD for K8s workloads, Pulumi for infrastructure
+- ACK (AWS Controllers for Kubernetes) for AWS resources like RDS
+- DNS: `sso.infra.thunderbird.net` via Route53, o11y at `pi.thunderbird.net` via Cloudflare
+
+## Blockers
+
+- **Phase 2B:** Google OAuth 2.0 credentials from MoCo (manages thunderbird.net Google Workspace)
+
+=== #41 Scale and performance testing: Keycloak and Thundermail
+## Objective
+
+Establish baseline performance metrics and identify scaling limits for Keycloak (OIDC provider) and Thundermail (Stalwart mail service) before user growth makes testing under load impractical.
+
+## Context
+
+Both services have known scaling concerns documented in architecture reviews:
+
+- **Keycloak** ([Accounts & Keycloak Architecture](docs/accounts-keycloak-architecture.md#scaling-assessment)): single point of failure for all authentication, low auto-scaling ceiling (max 4 tasks), Redis without Multi-AZ, no connection pooling, session storage in PostgreSQL
+- **Thundermail** ([Thundermail Architecture](docs/thundermail-architecture.md#architecture-review-scaling-assessment)): PostgreSQL data store bottleneck, 2 mail nodes (t3a.large), no PROXY protocol, no auto-scaling, single-region deployment
+- Related: #14 (security epic), #40 (accounts/keycloak security hardening)
+
+## Keycloak Performance Testing
+
+### Baseline Metrics to Establish
+- [ ] Login flow latency (P50, P95, P99) under normal load
+- [ ] Token refresh latency
+- [ ] Max concurrent authentication sessions before degradation
+- [ ] Database connection count under load
+- [ ] Infinispan/JGroups cluster sync overhead with 2 vs 4 nodes
+
+### Load Scenarios
+- [ ] Sustained auth load: simulate N concurrent users cycling login → token refresh → logout
+- [ ] Spike test: 10x normal auth rate for 5 minutes (simulates product launch or media coverage)
+- [ ] Celery backpressure: high volume of async tasks (email verification, Stalwart provisioning) with constrained worker pool
+- [ ] Node failure: kill one Keycloak task under load, measure recovery time and impact
+
+### Tooling
+- [k6](https://k6.io/) or [Locust](https://locust.io/) against the staging environment
+- CloudWatch metrics for ECS task CPU/memory, RDS connections, Redis memory/connections
+- Keycloak metrics endpoint (`/metrics`) if enabled
+
+### Success Criteria
+- Define max users per Fargate task size (512 CPU / 2048 MB)
+- Identify the scaling ceiling where 4 tasks are insufficient
+- Determine if PgBouncer/RDS Proxy is needed at current scale
+- Validate auto-scaling triggers and recovery behavior
+
+## Thundermail Performance Testing
+
+### Baseline Metrics to Establish
+- [ ] SMTP inbound delivery latency (message received → stored)
+- [ ] IMAP/JMAP fetch latency under concurrent connections
+- [ ] Max concurrent IMAP connections per node
+- [ ] PostgreSQL (Neon) query latency under write-heavy mail ingestion
+- [ ] S3 blob store throughput for large attachments
+
+### Load Scenarios
+- [ ] Sustained inbound SMTP: N messages/second for 1 hour
+- [ ] Bulk send: 10,000 messages in 5 minutes (marketing blast simulation)
+- [ ] Concurrent IMAP: 1,000+ simultaneous IMAP connections
+- [ ] Large attachment storm: 25 MB attachments at sustained rate
+- [ ] Node failure: kill one mail node under load, verify NLB failover
+
+### Tooling
+- [smtp-source](http://www.postfix.org/smtp-source.1.html) or [swaks](https://www.jetmore.org/john/code/swaks/) for SMTP load
+- [imapperf](https://github.com/UvA-FNWI/imapperf) or custom k6 script for IMAP load
+- Neon PostgreSQL monitoring dashboard
+- CloudWatch metrics for EC2, NLB, ElastiCache
+
+### Success Criteria
+- Messages/second per node (t3a.large) before degradation
+- Max concurrent IMAP connections per node
+- Neon PostgreSQL scaling wall (at what mailbox count does write latency spike?)
+- Confirm NLB failover works correctly when a node goes down
+- Baseline for deciding when to add a 3rd mail node or migrate data store
+
+## Staging Environment Requirements
+
+- [ ] Staging must be representative of production (same instance types, same Neon tier, same Redis config)
+- [ ] Seed staging with realistic data volume before testing
+- [ ] Ensure staging costs are bounded (tear down load generators after tests)
+
+## Deliverables
+
+- [ ] Performance test scripts (committed to repo, reusable for regression)
+- [ ] Baseline metrics report with current capacity numbers
+- [ ] Scaling recommendations with specific thresholds (e.g., "add 3rd node at X concurrent users")
+- [ ] Updated architecture docs with measured capacity numbers (replacing estimates)
+
+=== #40 [Epic] Accounts & Keycloak Security Posture Hardening
+## Overview
+
+Security hardening for the Thunderbird Accounts and Keycloak (OIDC) infrastructure based on the [Security Posture Review](docs/accounts-keycloak-architecture.md#security-posture-review). Findings cover authentication, session management, network security, and missing protections in the [thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts) infrastructure.
+
+## Findings by Severity
+
+### Critical
+- [ ] #29 — Keycloak brute force protection is disabled
+- [ ] #30 — SSL verification disabled for Stalwart API in production
+
+### High
+- [ ] #31 — OIDC fallback email matching enabled in production
+- [ ] #32 — Keycloak refresh tokens not revoked on use
+- [ ] #33 — No rate limiting on any API endpoint
+- [ ] #34 — Unrestricted egress SGs on all ECS services
+
+### Medium
+- [ ] #35 — Keycloak offline session idle timeout is 30 days
+- [ ] #36 — No security headers (CSP, X-Frame-Options, HSTS, Referrer-Policy)
+- [ ] #37 — Keycloak password reset allows user enumeration
+
+### Low
+- [ ] #38 — Keycloak brute force failure factor is 30 attempts
+- [ ] #39 — No WAF on Accounts or Keycloak ALBs
+
+## Suggested Priority Order
+
+1. **Immediate (Keycloak realm config changes):**
+   #29 (enable brute force protection + reduce failure factor #38),
+   #32 (revoke refresh tokens),
+   #31 (disable OIDC fallback email matching)
+
+2. **Quick wins:**
+   #30 (set VERIFY_PRIVATE_LINK_SSL=True — one config change),
+   #35 (reduce offline session timeout — realm config change)
+
+3. **Application hardening:**
+   #33 (add rate limiting — DRF throttling + WAF),
+   #36 (security headers — Django settings)
+
+4. **Infrastructure hardening:**
+   #34 (restrict egress SGs — needs testing),
+   #39 (WAF on ALBs)
+
+5. **Verify:**
+   #37 (password reset enumeration — may already be handled by Keycloak 26.x)
+
+## References
+
+- [Accounts & Keycloak Architecture and Security Posture Review](docs/accounts-keycloak-architecture.md)
+- [thunderbird-accounts repo](https://github.com/thunderbird/thunderbird-accounts)
+
+=== #39 [LOW] No WAF on Accounts or Keycloak ALBs
+## Finding
+
+Neither the accounts ALB nor the Keycloak ALB has an AWS WAF attached. This leaves both services exposed to common web attacks (SQL injection, XSS, bot traffic) without a first line of defense.
+
+**Severity:** LOW
+**Location:** pulumi/config.prod.yaml in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Evaluate AWS WAF with managed rule groups (AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet)
+- [ ] Add rate-based rules for login and sign-up endpoints
+- [ ] Alternatively, enable Cloudflare proxying for WAF + DDoS protection (DNS is already in Cloudflare)
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#findings-summary)
+
+=== #38 [LOW] Keycloak brute force failure factor is 30 attempts
+## Finding
+
+Even once brute force protection is enabled (see related critical issue), the failureFactor is set to 30 — meaning 30 failed login attempts are allowed before any lockout. This is excessively permissive.
+
+**Severity:** LOW (dependent on brute force being enabled first)
+**Location:** keycloak/data/import/tbpro-realm.json in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Reduce failureFactor to 5-10 when enabling brute force protection
+
+## Notes
+
+This should be addressed as part of the brute force protection enablement issue (#29).
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#findings-summary)
+
+=== #37 [MEDIUM] Keycloak password reset allows user enumeration
+## Finding
+
+The tbpro realm has resetPasswordAllowed set to true. Depending on Keycloak's response behavior, the password reset flow may reveal whether an email address is registered — enabling user enumeration.
+
+**Severity:** MEDIUM
+**Location:** keycloak/data/import/tbpro-realm.json in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Verify Keycloak returns the same response regardless of whether the email exists (Keycloak 26.x should do this by default — confirm)
+- [ ] If not, configure Keycloak to show a generic message
+- [ ] Add rate limiting to the password reset endpoint
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#findings-summary)
+
+=== #36 [MEDIUM] No security headers (CSP, X-Frame-Options, HSTS, Referrer-Policy)
+## Finding
+
+The Django application does not set standard security headers:
+
+- **No Content-Security-Policy** — XSS risk
+- **No X-Frame-Options** hardening — clickjacking risk
+- **No Referrer-Policy** — information leakage
+- **No Permissions-Policy** — unnecessary browser API access
+- **No SECURE_HSTS_SECONDS** — HSTS not enforced at the application layer
+
+**Severity:** MEDIUM
+**Location:** src/thunderbird_accounts/settings.py in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Enable Django SecurityMiddleware with SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS, SECURE_HSTS_PRELOAD, SECURE_CONTENT_TYPE_NOSNIFF
+- [ ] Set X_FRAME_OPTIONS = DENY
+- [ ] Add Referrer-Policy: strict-origin-when-cross-origin header
+- [ ] Consider adding django-csp for Content-Security-Policy
+- [ ] Add Permissions-Policy header to restrict browser APIs
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#medium-missing-security-headers)
+
+=== #35 [MEDIUM] Keycloak offline session idle timeout is 30 days
+## Finding
+
+Keycloak offline sessions have a 30-day idle timeout (offlineSessionIdleTimeout: 2592000). A compromised device retains valid session tokens for up to a month without user activity. For an email service, this significantly extends the window of account compromise.
+
+**Severity:** MEDIUM
+**Location:** keycloak/data/import/tbpro-realm.json in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Reduce offline session idle timeout to 7 days
+- [ ] Consider requiring re-authentication for sensitive operations (password change, email alias management, custom domain setup)
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#medium-long-offline-session-timeout)
+
+=== #34 [HIGH] Unrestricted egress SGs on all ECS services (accounts)
+## Finding
+
+All ECS services (accounts, Keycloak, Celery) allow egress on TCP 0-65535 to 0.0.0.0/0. A compromised container can exfiltrate data to any destination on any port.
+
+**Severity:** HIGH
+**Location:** pulumi/config.prod.yaml in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Restrict egress to specific destinations and ports:
+  - TCP 443 to Keycloak ALB, Stalwart private NLB, Paddle API, Sentry, ECR, S3
+  - TCP 5432 to PostgreSQL RDS endpoints
+  - TCP 6379 to ElastiCache Redis
+  - TCP 443 to VPC endpoints (Secrets Manager, ECR, CloudWatch Logs)
+- [ ] Test all service integrations after restricting egress
+- [ ] Document any additional egress requirements
+
+## Notes
+
+This is the same pattern as the mailstrom egress issue (#18). Consider a shared approach to egress restriction across all Thunderbird services.
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#high-unrestricted-egress)
+
+=== #33 [HIGH] No rate limiting on any API endpoint
+## Finding
+
+There is no rate limiting configured anywhere in the accounts service — not in Django REST Framework throttling, not in the ALB, and not at the application layer. All endpoints are vulnerable to:
+
+- Credential stuffing against the sign-up and login flows
+- API abuse (mail account creation, domain verification)
+- Denial of service via resource exhaustion
+
+**Severity:** HIGH
+**Location:** src/thunderbird_accounts/settings.py in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Configure DRF throttle classes for API endpoints (AnonRateThrottle, UserRateThrottle)
+- [ ] Add WAF rules on the ALBs with rate-based rules
+- [ ] Consider enabling Cloudflare proxying (DNS is already in Cloudflare but not proxied) for DDoS protection and rate limiting
+- [ ] Set appropriate limits for sign-up, login, and mail provisioning endpoints
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#high-no-rate-limiting)
+
+=== #32 [HIGH] Keycloak refresh tokens are not revoked on use
+## Finding
+
+The tbpro realm has revokeRefreshToken set to false. Refresh tokens remain valid even after being used to obtain new access tokens. A leaked refresh token can be used indefinitely (up to the offline session timeout of 30 days) to obtain new access tokens.
+
+**Severity:** HIGH
+**Location:** keycloak/data/import/tbpro-realm.json in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Set revokeRefreshToken to true in the Keycloak tbpro realm
+- [ ] Test token refresh flows (accounts app, any other OIDC clients) to ensure they handle single-use refresh tokens correctly
+- [ ] Verify mozilla-django-oidc middleware properly obtains and stores new refresh tokens after each refresh
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#high-refresh-tokens-not-revoked)
+
+=== #31 [HIGH] OIDC fallback email matching enabled in production
+## Finding
+
+Production has OIDC_FALLBACK_MATCH_BY_EMAIL set to True. If the primary OIDC ID match fails, the system falls back to matching users by email address. If an attacker can register a Keycloak account with a target's email (through race conditions or realm misconfiguration), they could take over the existing Django user account.
+
+**Severity:** HIGH
+**Location:** pulumi/config.prod.yaml in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Remediation
+
+- [ ] Set OIDC_FALLBACK_MATCH_BY_EMAIL=False in production config
+- [ ] Verify all existing users have a valid oidc_id set (no orphaned accounts that rely on email matching)
+- [ ] If any users lack oidc_id, backfill from Keycloak before disabling fallback
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#high-oidc-fallback-email-matching)
+
+=== #30 [CRITICAL] SSL verification disabled for Stalwart API in production
+## Finding
+
+Production config sets VERIFY_PRIVATE_LINK_SSL to False for the Stalwart Management API connection. The accounts service does not verify TLS certificates when calling the Stalwart API over the VPC peering link. A man-in-the-middle on the internal network could intercept all mail provisioning operations, including creating accounts and reading mailbox metadata.
+
+**Severity:** CRITICAL
+**Location:** pulumi/config.prod.yaml in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Impact
+
+All communication between the accounts service and Stalwart management API (account creation, quota updates, alias management, domain verification) is vulnerable to interception or modification by any host on the VPC peering path.
+
+## Remediation
+
+- [ ] Set VERIFY_PRIVATE_LINK_SSL=True in config.prod.yaml
+- [ ] Ensure the Stalwart management endpoint presents a valid certificate
+- [ ] If the private NLB uses a self-signed cert, provision an ACM certificate or install the internal CA cert in the accounts container trust store
+- [ ] Test mail provisioning operations after enabling verification
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#critical-ssl-verification-disabled-for-internal-apis)
+
+=== #29 [CRITICAL] Keycloak brute force protection is disabled
+## Finding
+
+The `tbpro` Keycloak realm has `bruteForceProtected: false`. There is no account lockout after failed login attempts. An attacker can make unlimited password guesses against any account.
+
+Even if brute force protection were enabled, the `failureFactor` is set to 30 — meaning 30 failed attempts before lockout, which is far too high.
+
+**Severity:** CRITICAL
+**Location:** `keycloak/data/import/tbpro-realm.json` in [thunderbird/thunderbird-accounts](https://github.com/thunderbird/thunderbird-accounts)
+
+## Impact
+
+Credential stuffing and brute force attacks against any Thunderbird Pro account are completely unthrottled. An attacker with a leaked email list can attempt millions of password combinations.
+
+## Remediation
+
+- [ ] Enable brute force protection in the `tbpro` realm (`bruteForceProtected: true`)
+- [ ] Reduce `failureFactor` from 30 to 5-10
+- [ ] Set `permanentLockout: false` with a reasonable `waitIncrementSeconds` (e.g., 60s)
+- [ ] Configure `maxFailureWaitSeconds` (e.g., 900s / 15 minutes)
+- [ ] Consider CAPTCHA integration after 3-5 failures
+- [ ] Verify changes in staging before applying to production realm
+
+## References
+
+- [Security Posture Review](docs/accounts-keycloak-architecture.md#critical-keycloak-brute-force-protection-disabled)
+
+=== #28 [Epic] Thundermail Security Posture Hardening
+## Overview
+
+Security hardening for the Thundermail (Stalwart) email infrastructure based on the [Security Posture Review](docs/thundermail-architecture.md#security-posture-review). Findings cover encryption, IAM, network, and operational security gaps in the [mailstrom](https://github.com/thunderbird/mailstrom) infrastructure.
+
+## Findings by Severity
+
+### Critical
+- [ ] #15 — Redis connections are unencrypted (`redis://...#insecure`)
+- [ ] #16 — S3 IAM policy grants `s3:*` (all actions)
+- [ ] #17 — PostgreSQL TLS allows invalid certificates
+
+### High
+- [ ] #18 — Unrestricted egress SGs (0–65535 to 0.0.0.0/0)
+- [ ] #19 — Secrets persisted in plaintext on disk
+- [ ] #20 — IMDSv2 token TTL set to 6 hours
+- [ ] #21 — No S3 VPC Gateway Endpoint
+
+### Medium
+- [ ] #22 — Bootstrap `set -x` debug logging
+- [ ] #23 — S3 blob bucket hardening gaps
+- [ ] #24 — Secrets Manager IAM wildcard pattern
+- [ ] #25 — No Redis encryption at rest or AUTH token
+
+### Low
+- [ ] #26 — CloudFront has no WAF
+- [ ] #27 — No TLS version pinning in Stalwart config
+
+## Suggested Priority Order
+
+1. **Quick wins (minimal risk, high value):**
+   #21 (S3 VPC endpoint — free, zero risk),
+   #22 (remove `set -x`),
+   #20 (reduce IMDSv2 TTL),
+   #16 (restrict S3 IAM — small code change)
+
+2. **Redis hardening (combine into one effort):**
+   #15 + #25 — enable TLS, encryption at rest, and AUTH together
+
+3. **Verify and enforce:**
+   #17 (audit Postgres TLS settings across environments),
+   #19 (file permissions + EBS encryption),
+   #24 (tighten Secrets Manager IAM)
+
+4. **Bigger changes (require testing):**
+   #18 (egress restriction — needs careful testing with mail delivery),
+   #23 (S3 bucket hardening — multiple settings)
+
+5. **Low priority / evaluate:**
+   #26 (CloudFront WAF),
+   #27 (TLS pinning)
+
+## References
+
+- [Thundermail Architecture & Security Posture Review](docs/thundermail-architecture.md)
+- [mailstrom repo](https://github.com/thunderbird/mailstrom)
+
+=== #27 [LOW] No TLS version pinning in Stalwart config
+## Finding
+
+The Stalwart configuration does not specify minimum TLS versions for mail services (IMAPS, SMTPS, HTTPS). It relies on Stalwart's defaults, which may allow older TLS versions.
+
+**Severity:** LOW
+**Location:** `bootstrap/templates/stalwart.toml.j2` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Set minimum TLS version to 1.2 in Stalwart config for all listeners
+- [ ] Verify that all mail clients and sending servers in use support TLS 1.2+
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#findings-summary)
+
+=== #26 [LOW] CloudFront distribution has no WAF
+## Finding
+
+The CloudFront distribution serving autoconfig XML files has no WAF (Web Application Firewall) attached. While the attack surface is limited (static XML files), a WAF would provide rate limiting and bot protection.
+
+**Severity:** LOW
+**Location:** `__main__.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Evaluate whether WAF is warranted for the autoconfig distribution
+- [ ] If yes, attach AWS WAF with baseline managed rules (rate limiting, known bad inputs)
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#findings-summary)
+
+=== #25 [MEDIUM] No Redis encryption at rest or AUTH token
+## Finding
+
+The ElastiCache Redis cluster does not have encryption at rest enabled, and no AUTH token is configured. This is related to but distinct from the unencrypted connection issue — even if transit encryption is enabled, data at rest in Redis remains unencrypted and unauthenticated.
+
+**Severity:** MEDIUM
+**Location:** `config.prod.yaml` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Enable `at_rest_encryption_enabled` on the ElastiCache cluster
+- [ ] Configure an AUTH token for Redis access
+- [ ] Store the AUTH token in Secrets Manager
+- [ ] Update bootstrap templates to include the AUTH token in Redis connection strings
+
+## Notes
+
+This can be combined with #15 (Redis TLS) into a single Redis security hardening effort.
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#findings-summary)
+
+=== #24 [MEDIUM] Secrets Manager IAM policy uses wildcard pattern
+## Finding
+
+The IAM policy for Secrets Manager access uses the pattern `mailstrom/{stack}/stalwart.postboot.*`. This grants access to all current and future postboot secrets. If a new secret is added (even accidentally), all nodes can read it.
+
+**Severity:** MEDIUM
+**Location:** `stalwart/iam.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Enumerate the specific secret ARNs in the IAM policy rather than using a wildcard pattern
+- [ ] Verify node bootstrap still works after restricting the policy
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#medium-secrets-manager-iam-wildcard)
+
+=== #23 [MEDIUM] S3 blob bucket hardening gaps
+## Finding
+
+The S3 blob storage bucket is missing several defense-in-depth controls:
+
+- **No Block Public Access** — the four `BlockPublicAccess` settings are not configured
+- **No access logging** — no audit trail of object access
+- **No MFA Delete** — objects and versions can be deleted without MFA
+- **Default AWS-managed KMS key** — no customer-managed key with explicit key policy or rotation
+
+**Severity:** MEDIUM
+**Location:** `stalwart/s3.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Enable all four Block Public Access settings (`block_public_acls`, `block_public_policy`, `ignore_public_acls`, `restrict_public_buckets`)
+- [ ] Enable S3 server access logging to a dedicated log bucket
+- [ ] Use a customer-managed KMS key with rotation policy
+- [ ] Consider MFA Delete for the production bucket
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#medium-s3-bucket-hardening-gaps)
+
+=== #22 [MEDIUM] Bootstrap user data script has set -x debug logging
+## Finding
+
+The Phase 1 user data script runs with `set -x`, which echoes every command to `/var/log/cloud-init-output.log`. Any environment variables or intermediate values in Phase 1 are logged. User data itself is also accessible via the instance metadata service to any process on the host.
+
+**Severity:** MEDIUM
+**Location:** `stalwart_instance_user_data.sh.j2` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Remove `set -x` from the user data template
+- [ ] Replace with `set -e` (exit on error) for safer failure handling
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#medium-bootstrap-debug-logging)
+
+=== #21 [HIGH] No S3 VPC Gateway Endpoint — blob traffic traverses the internet
+## Finding
+
+The VPC has a Secrets Manager interface endpoint but no S3 Gateway Endpoint. All blob storage traffic (email bodies, attachments) leaves the VPC through the NAT gateway and traverses the public internet to reach S3. This adds latency, increases NAT gateway data processing costs, and creates an unnecessary exposure surface.
+
+**Severity:** HIGH
+**Location:** `config.prod.yaml` / `__main__.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Add an S3 Gateway Endpoint to the VPC
+- [ ] Update route tables for private subnets to route S3 traffic through the endpoint
+- [ ] Verify blob storage operations work correctly through the endpoint
+
+## Notes
+
+S3 Gateway Endpoints are free and keep all S3 traffic on the AWS backbone network. This is a zero-risk, high-value change.
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#high-no-s3-vpc-gateway-endpoint)
+
+=== #20 [HIGH] IMDSv2 token TTL set to 6 hours
+## Finding
+
+The bootstrap script requests IMDSv2 tokens with a TTL of 21600 seconds (6 hours). The standard recommendation is ~900 seconds (15 minutes). A longer-lived token increases the window of exposure if the token is leaked.
+
+**Severity:** HIGH
+**Location:** `bootstrap/bootstrap.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Reduce IMDSv2 token TTL from 21600s to 900s (15 minutes)
+- [ ] Verify bootstrap completes well within the reduced TTL window
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#findings-summary)
+
+=== #19 [HIGH] Secrets persisted in plaintext on disk
+## Finding
+
+The Phase 2 bootstrap renders secrets (database passwords, admin password, Keycloak credentials) directly into `/opt/stalwart/etc/config.toml`. This file persists on the EBS volume in plaintext. The bootstrap script does not explicitly set file permissions — the file inherits whatever the default umask produces.
+
+If a node's EBS volume is snapshotted, shared, or the instance is compromised via SSH, all secrets are immediately exposed.
+
+**Severity:** HIGH
+**Location:** `bootstrap/bootstrap.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Set file permissions to `0600` owned by root in `bootstrap.py` after writing config files
+- [ ] Enable EBS volume encryption on all Stalwart node instances
+- [ ] Investigate whether Stalwart supports fetching secrets from an external source at runtime (environment variables, Secrets Manager SDK) rather than config-file injection
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#high-secrets-persisted-in-plaintext-on-disk)
+
+=== #18 [HIGH] Unrestricted egress security group rules (0–65535 to 0.0.0.0/0)
+## Finding
+
+Both the NLB security groups and EC2 node security groups allow egress on TCP ports 0–65535 to 0.0.0.0/0. While outbound connectivity is necessary for mail delivery and pulling Docker images, this is far broader than needed. A compromised node could exfiltrate data to any destination on any port.
+
+**Severity:** HIGH
+**Location:** `stalwart/__init__.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Restrict egress to only required destinations and ports:
+  - TCP 25, 465, 587 to 0.0.0.0/0 (outbound SMTP)
+  - TCP 443 to 0.0.0.0/0 (Docker Hub, ACME, Keycloak)
+  - TCP 5432 to Neon IP ranges (PostgreSQL)
+  - TCP 6379 to Redis SG (ElastiCache)
+  - TCP 443 to S3 VPC endpoint (blob storage)
+- [ ] Test that Stalwart operations work correctly with restricted egress
+- [ ] Document any additional egress requirements discovered during testing
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#high-unrestricted-egress-rules)
+
+=== #17 [CRITICAL] PostgreSQL TLS allows invalid certificates
+## Finding
+
+The Stalwart config template accepts a `tls.allow-invalid-certs` parameter from the secrets backend. If set to `true`, connections to the PostgreSQL database (Neon) are vulnerable to man-in-the-middle attacks. All user mail metadata, account data, and FTS indexes transit this connection.
+
+**Severity:** CRITICAL
+**Location:** `bootstrap/templates/stalwart.toml.j2` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Audit the `stalwart.postboot.postgresql_backend` secret in all environments — ensure `allow-invalid-certs` is `false`
+- [ ] Consider pinning the Neon CA certificate
+- [ ] Add a validation check in `bootstrap.py` that fails if `allow-invalid-certs` is `true` in production
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#critical-postgresql-tls-certificate-validation)
+
+=== #16 [CRITICAL] S3 IAM policy grants s3:* — overly permissive
+## Finding
+
+The instance role's S3 policy grants `s3:*` on the blob storage bucket. This gives every Stalwart node permission to perform any S3 action, including `DeleteBucket`, `PutBucketPolicy`, `PutBucketAcl`, and `ListAllMyBuckets`. A compromised node could delete the entire bucket or make it publicly accessible.
+
+Additionally, the resource ARN pattern uses `f'{bucket_arn}*'` instead of `f'{bucket_arn}/*'`, which could match unintended resources sharing the same ARN prefix.
+
+**Severity:** CRITICAL
+**Location:** `stalwart/s3.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Remediation
+
+- [ ] Restrict IAM actions to `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, and `s3:ListBucket`
+- [ ] Fix the resource ARN wildcard from `{bucket_arn}*` to `{bucket_arn}/*`
+- [ ] Verify Stalwart doesn't require any other S3 actions at runtime
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#critical-overly-permissive-s3-iam-policy)
+
+=== #15 [CRITICAL] Redis connections are unencrypted
+## Finding
+
+The ElastiCache Redis cluster is connected via `redis://...#insecure`, which explicitly disables TLS. All data transiting between Stalwart nodes and Redis — including pubsub coordination messages, cached session state, rate-limit counters, and spam filter data — travels in cleartext within the VPC.
+
+Redis also appears to have no AUTH token configured, meaning any host that can reach the Redis port can read/write all data.
+
+**Severity:** CRITICAL
+**Location:** `stalwart/redis.py` in [thunderbird/mailstrom](https://github.com/thunderbird/mailstrom)
+
+## Impact
+
+An attacker with access to any host in the VPC (or a compromised peered VPC) could passively sniff all Redis traffic. Without AUTH, any host that can reach the Redis port can read/write all cached data, inject pubsub messages, and manipulate rate-limit state.
+
+## Remediation
+
+- [ ] Enable `transit_encryption_enabled` on the ElastiCache cluster
+- [ ] Enable `at_rest_encryption_enabled` on the ElastiCache cluster
+- [ ] Switch connection strings from `redis://` to `rediss://` (TLS)
+- [ ] Remove the `#insecure` flag from connection strings
+- [ ] Configure an AUTH token and pass it via Secrets Manager
+- [ ] Update `stalwart.toml.j2` to use the AUTH token in Redis connection strings
+
+## References
+
+- [Security Posture Review](../docs/thundermail-architecture.md#critical-redis-connections-are-unencrypted)
+
+=== #14 [Epic] AWS Security Posture & Identity Center Migration
+## Overview
+Assess and remediate MZLA's AWS security posture, migrate from per-account IAM users to centralized SSO via AWS IAM Identity Center, and establish foundational security controls across the five-account AWS organization.
+
+## Goals
+- **Zero IAM users for humans** — all human access via SSO
+- **Zero long-lived access keys for humans** — CLI access via short-lived SSO credentials
+- **100% CI/CD on OIDC** — no service account access keys (SES SMTP excepted)
+- **Org-wide logging and monitoring** — CloudTrail, GuardDuty, Config in all accounts
+- **Baseline SCPs** — guardrails preventing the most common misconfigurations
+- **Identity independence** — Keycloak as MZLA's IdP, federated to Identity Center
+- **MoCo collaboration** — peer advisory relationship with MoCo security team
+
+## Workstreams
+
+### Assess
+- [ ] #3 — AWS Organization Discovery & Security Assessment
+- [ ] #9 — Keycloak Discovery & Identity Center Federation (discovery phase)
+
+### Remediate
+- [ ] #4 — Quick wins: S3 public access blocks, stale keys, dead IAM users
+- [ ] #5 — MFA enforcement for all console users
+- [ ] #6 — Deploy org-wide CloudTrail via Pulumi
+- [ ] #7 — Deploy baseline SCPs
+- [ ] #11 — Enable GuardDuty and Config org-wide
+- [ ] #13 — MoCo security collaboration
+
+### Migrate
+- [ ] #8 — IAM Identity Center: RFC, configuration, and user onboarding
+- [ ] #9 — Keycloak Discovery & Identity Center Federation (federation phase)
+
+### Harden
+- [ ] #12 — IAM hardening: disable IAM users, deny creation, break-glass procedure
+- [ ] #10 — CI/CD OIDC migration (weeks 4-8, longest tail item)
+
+## Success Metrics
+| Metric | Baseline | Target |
+|--------|----------|--------|
+| Users without MFA | ~13 | 0 |
+| Accounts with CloudTrail | 1/5 | 5/5 |
+| Accounts with GuardDuty | ? | 5/5 |
+| Humans on SSO | 0 | 100% |
+| IAM users (humans) | ~22 | 0 |
+| CI/CD on OIDC | 1/14 | 14/14 |
+| Stale access keys (>90d) | ~10+ | 0 |
+
+## Timeline
+- Core security + SSO: ~4 weeks
+- CI/CD OIDC migration: weeks 4-8 (repo-by-repo)
+
+=== #13 MoCo security collaboration
+## Objective
+Establish a peer advisory relationship with Mozilla Corporation's security team for ongoing InfoSec collaboration.
+
+## Context
+- This is peer advisory, not a formal review queue
+
+## Tasks
+- [ ] Share sanitized gap report findings and remediation plan
+- [ ] Establish lightweight ongoing touchpoint (quarterly review, ad-hoc advisory)
+
+## Notes
+- Frame as: MZLA is building its own security capability; MoCo is a collaboration partner, not a gatekeeper
+- Keep identity ownership (Keycloak) separate from InfoSec collaboration
+- Exploring how to scale security initiatives across MoCo/MoFo/MZLA/MZ.AI — our work may inform that
+
+=== #12 IAM hardening: disable IAM users, deny creation, break-glass procedure
+## Objective
+Once SSO migration is complete, lock down IAM user access and establish emergency procedures.
+
+## Tasks
+- [ ] Disable IAM console access for all migrated users
+- [ ] Rotate/delete remaining access keys for human users
+- [ ] Delete IAM users (humans only — service accounts handled in OIDC migration)
+- [ ] Deploy SCP denying IAM user creation
+- [ ] Document break-glass procedure (when/how to use root or emergency IAM access)
+- [ ] Test break-glass procedure with team
+- [ ] Establish operational cadence: monthly access review, quarterly break-glass test
+
+## Success Criteria
+- 0 IAM users for humans
+- 0 access keys for humans
+- Break-glass procedure tested and documented
+- SCP preventing new IAM user creation
+
+## Dependencies
+- Identity Center migration complete (#8)
+- CI/CD OIDC migration complete (#10)
+
+=== #11 Enable GuardDuty and Config org-wide
+## Objective
+Enable AWS GuardDuty and AWS Config across all 5 accounts in the organization.
+
+## Tasks
+- [ ] Enable GuardDuty with delegated admin in management account
+- [ ] Enable Config with org-wide aggregation
+- [ ] Deploy via Pulumi using existing `tb_pulumi` modules (guardduty, cfg)
+- [ ] Verify findings/data flowing from all accounts
+- [ ] Set up basic alerting for high-severity GuardDuty findings
+
+## Notes
+- `tb_pulumi` has existing modules for both — use them
+
+=== #10 CI/CD OIDC migration: GitHub Actions service accounts → IAM roles
+## Objective
+Migrate 13 legacy IAM service accounts used by GitHub Actions to OIDC-based IAM role assumption. Eliminate long-lived access keys from CI/CD pipelines.
+
+## Tasks
+- [ ] Inventory all 13 service accounts and their associated repos/workflows
+- [ ] Document the existing OIDC pattern from `thunderbird-website/pulumi/setup-oidc-role.sh`
+- [ ] For each repo:
+  - [ ] Create OIDC IAM role with scoped permissions
+  - [ ] Update GitHub Actions workflow to use `aws-actions/configure-aws-credentials` with OIDC
+  - [ ] Test the deploy pipeline
+  - [ ] Delete the old IAM user and access keys
+- [ ] Track progress per-repo below
+
+## Repo Tracker
+| Repo | OIDC Role Created | Workflow Updated | Pipeline Tested | Old IAM User Deleted |
+|------|:-:|:-:|:-:|:-:|
+| (inventory needed) | | | | |
+
+## Notes
+- This is the longest-tail item in the plan — each repo needs individual attention
+- Pattern exists in `thunderbird-website` — replicate, don't reinvent
+- SES SMTP is a known exception (requires access keys) — document it
+- Claude Code can do the heavy lifting on role policies and workflow updates
+
+=== #9 Keycloak discovery and Identity Center federation
+## Objective
+Assess Keycloak instance and determine if it can serve as the identity source for AWS Identity Center.
+
+## Discovery (Week 1-2)
+- [ ] How to make it production-grade? (HA, RDS backend, backups)
+- [ ] Can it support SAML federation to Identity Center as-is?
+
+## Decision
+Based on discovery, choose one:
+- **Option A**: Native directory now, Keycloak federation later (if Keycloak needs hardening)
+- **Option B**: Federate Keycloak → Identity Center directly (if Keycloak is production-ready)
+
+## Federation (when ready)
+- [ ] Configure Keycloak as SAML 2.0 IdP → Identity Center as SP
+- [ ] Map Keycloak SAML attributes to Identity Center groups
+- [ ] Configure SCIM provisioning (optional but recommended)
+- [ ] Test SSO login flow end-to-end
+- [ ] Migrate users from native directory to Keycloak-managed (if Option A was used first)
+
+## Notes
+- Keycloak scope is narrowly AWS SSO via Identity Center
+
+=== #8 IAM Identity Center: RFC, configuration, and user onboarding
+## Objective
+Configure AWS IAM Identity Center as the centralized access management layer for all MZLA AWS accounts.
+
+## Tasks
+
+### RFC
+- [ ] Finalize RFC-PLAT-001 (IAM Identity Center)
+- [ ] Circulate for team review
+- [ ] Incorporate feedback
+- [ ] Get sign-off
+
+### Configuration (Pulumi)
+- [ ] Configure Identity Center (identity source TBD — native directory or Keycloak federation)
+- [ ] Create permission sets from group/permission set matrix
+- [ ] Create groups and account assignments
+- [ ] Test SSO login flow for each permission set × account combination
+- [ ] Write onboarding guide for users
+
+### User Migration
+- [ ] Wave 1: Platform admins (2 users)
+- [ ] Wave 2: Legacy account admins (8 users)
+- [ ] Wave 3: Business Data users / STX contractors (7 users)
+- [ ] Wave 4: Bitergia users
+- [ ] 2-week parallel access period
+- [ ] Disable IAM console access after parallel period
+
+## Dependencies
+- Assessment (#3) for group/permission set matrix inputs
+- Keycloak discovery (#TBD) determines identity source
+
+## Notes
+- Permission sets and groups are data-driven from config, not hardcoded
+- Identity source (native directory vs Keycloak SAML) is a variable — Pulumi code is the same either way
+
+=== #7 Deploy baseline SCPs
+## Objective
+Establish baseline Service Control Policies across the AWS organization.
+
+## Tasks
+- [ ] Define baseline SCP set (deny root usage, enforce region, protect CloudTrail, etc.)
+- [ ] Deploy via Pulumi
+- [ ] Test that SCPs don't break existing workloads
+- [ ] Document SCP inventory and rationale
+
+## Notes
+- Currently only the default FullAWSAccess SCP is attached
+- Start conservative — deny obvious bad things, don't restrict workloads yet
+- Later phase: SCP to deny IAM user creation (after SSO migration complete)
+
+=== #6 Deploy org-wide CloudTrail via Pulumi
+## Objective
+Enable organization-wide CloudTrail logging. Currently only 1 of 5 accounts has CloudTrail configured.
+
+## Tasks
+- [ ] Create `thunderbird/platform-infrastructure` repo (if not exists)
+- [ ] Set up Pulumi project structure (Python, following MZLA conventions)
+- [ ] Deploy org-wide trail to centralized S3 bucket in management account
+- [ ] Enable log file validation
+- [ ] Configure KMS encryption
+- [ ] Verify events flowing from all 5 accounts
+
+## Notes
+- First real Pulumi project in the new platform-infrastructure repo
+- Use `tb_pulumi` S3 module for the log bucket where applicable
+- Raw `pulumi_aws` for CloudTrail org trail (no `tb_pulumi` module exists yet)
+
+=== #5 MFA enforcement for all console users
+## Objective
+Ensure all IAM users with console access have MFA enabled.
+
+## Tasks
+- [ ] Identify all console users without MFA (assessment found ~13)
+- [ ] Notify affected users with instructions
+- [ ] Set enforcement deadline
+- [ ] Verify compliance
+- [ ] Document exceptions (if any)
+
+## Dependencies
+- Requires completed assessment (#3)
+
+=== #4 Quick wins: S3 public access blocks, stale keys, dead IAM users
+## Objective
+Address low-hanging security findings from the assessment that can be remediated immediately.
+
+## Tasks
+- [ ] Enable S3 account-level public access blocks (all accounts)
+- [ ] Delete access keys unused >90 days
+- [ ] Decommission IAM users with no recent activity
+- [ ] Document what was changed and why
+
+## Dependencies
+- Requires completed assessment (#3)
+
+## Notes
+- These are pre-Pulumi fixes — CLI shell automation is fine
+- Goal is reducing attack surface before the larger migration
+
+=== #3 AWS Organization Discovery & Security Assessment
+## Objective
+Run a comprehensive discovery of the MZLA AWS organization to establish a security baseline.
+
+## Scope
+- Org structure: accounts, OUs, enabled policy types, service principals
+- Per-account IAM audit: users, console access, MFA status, access key age/usage, policies, group memberships
+- Per-account security config: CloudTrail, Config, GuardDuty, root MFA, password policy, S3 public access block
+- SCP inventory
+- IAM Identity Center status
+- Cross-account identity correlation (username patterns)
+- Service account identification (candidates for OIDC migration)
+
+## Deliverables
+- [ ] `discover-mzla-org.py` discovery script (Python/boto3)
+- [ ] `mzla-aws-org.yaml` — org structure and per-account inventory
+- [ ] `mzla-security-findings.yaml` — findings by severity
+- [ ] `mzla-user-access-report.md` — user inventory with effective permissions classification
+- [ ] `mzla-security-gap-report.md` — findings, risk matrix, remediation mapping
+- [ ] `mzla-group-permset-matrix.md` — permission sets, groups, assignment matrix
+
+## Notes
+- Uses cross-account role assumption via `OrganizationAccountAccessRole`
+- Access classification: admin / power-user / service-scoped / read-only / minimal / no-access
+- Output feeds directly into the Identity Center RFC and migration plan
+
+=== #2 AWS Organization Discovery & Security Assessment
+## Objective
+Run a comprehensive discovery of the MZLA AWS organization to establish a security baseline.
+
+## Scope
+- Org structure: accounts, OUs, enabled policy types, service principals
+- Per-account IAM audit: users, console access, MFA status, access key age/usage, policies, group memberships
+- Per-account security config: CloudTrail, Config, GuardDuty, root MFA, password policy, S3 public access block
+- SCP inventory
+- IAM Identity Center status
+- Cross-account identity correlation (username patterns)
+- Service account identification (candidates for OIDC migration)
+
+## Deliverables
+- [ ] `discover-mzla-org.py` discovery script (Python/boto3)
+- [ ] `mzla-aws-org.yaml` — org structure and per-account inventory
+- [ ] `mzla-security-findings.yaml` — findings by severity
+- [ ] `mzla-user-access-report.md` — user inventory with effective permissions classification
+- [ ] `mzla-security-gap-report.md` — findings, risk matrix, remediation mapping
+- [ ] `mzla-group-permset-matrix.md` — permission sets, groups, assignment matrix
+
+## Notes
+- Uses cross-account role assumption via `OrganizationAccountAccessRole`
+- Access classification: admin / power-user / service-scoped / read-only / minimal / no-access
+- Output feeds directly into the Identity Center RFC and migration plan
+

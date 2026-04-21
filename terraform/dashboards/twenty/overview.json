@@ -159,7 +159,7 @@
             "type": "prometheus",
             "uid": "P4169E866C3094E38"
           },
-          "expr": "count(kube_pod_status_ready{namespace=\"twenty\",condition=\"true\"} * on(pod) group_left() kube_pod_labels{namespace=\"twenty\",label_app_kubernetes_io_component=\"server\"})",
+          "expr": "count(kube_pod_status_ready{namespace=\"twenty\",condition=\"true\",pod=~\"twenty-twenty-server-.*\"} == 1)",
           "legendFormat": "",
           "refId": "A"
         }
@@ -222,7 +222,7 @@
             "type": "prometheus",
             "uid": "P4169E866C3094E38"
           },
-          "expr": "count(kube_pod_status_ready{namespace=\"twenty\",condition=\"true\"} * on(pod) group_left() kube_pod_labels{namespace=\"twenty\",label_app_kubernetes_io_component=\"worker\"})",
+          "expr": "count(kube_pod_status_ready{namespace=\"twenty\",condition=\"true\",pod=~\"twenty-twenty-worker-.*\"} == 1)",
           "legendFormat": "",
           "refId": "A"
         }

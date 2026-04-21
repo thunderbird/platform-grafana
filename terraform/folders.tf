@@ -29,3 +29,7 @@ resource "grafana_folder" "core_services" {
 resource "grafana_folder" "bitergia" {
   title = "Bitergia"
 }
+
+resource "grafana_folder" "twenty" {
+  title = "Twenty"
+}

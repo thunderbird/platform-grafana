@@ -100,3 +100,9 @@ resource "grafana_dashboard" "bitergia_infrastructure" {
   folder      = grafana_folder.bitergia.id
   config_json = file("${path.module}/dashboards/bitergia/infrastructure.json")
 }
+
+# Twenty dashboards
+resource "grafana_dashboard" "twenty_overview" {
+  folder      = grafana_folder.twenty.id
+  config_json = file("${path.module}/dashboards/twenty/overview.json")
+}

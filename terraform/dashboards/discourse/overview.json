@@ -254,14 +254,18 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "sum by (status) (rate(discourse_http_requests{namespace=\"discourse\"}[5m]))",
           "refId": "A",
-          "legendFormat": "{{status}}"
+          "legendFormat": "{{status}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -297,14 +301,18 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(discourse_http_requests_duration_seconds_bucket{namespace=\"discourse\",success=\"true\"}[5m])))",
           "refId": "A",
-          "legendFormat": "p95"
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -340,14 +348,18 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "100 * (sum(rate(discourse_http_requests{namespace=\"discourse\",status=~\"4..|5..\"}[5m])) / clamp_min(sum(rate(discourse_http_requests{namespace=\"discourse\"}[5m])), 1))",
           "refId": "A",
-          "legendFormat": "error_rate"
+          "legendFormat": "error_rate",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -383,14 +395,18 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "sum by (type) (rate(discourse_page_views{namespace=\"discourse\"}[5m]))",
           "refId": "A",
-          "legendFormat": "{{type}}"
+          "legendFormat": "{{type}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -426,14 +442,18 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, job_class) (rate(discourse_sidekiq_job_duration_seconds_bucket{namespace=\"discourse\"}[5m])))",
           "refId": "A",
-          "legendFormat": "p95 {{job_class}}"
+          "legendFormat": "p95 {{job_class}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -469,14 +489,18 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "sum by (status) (rate(discourse_sidekiq_processed_jobs_total{namespace=\"discourse\"}[5m]))",
           "refId": "A",
-          "legendFormat": "{{status}}"
+          "legendFormat": "{{status}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1668,14 +1692,18 @@
         "h": 3
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "avg(aws_elasticache_engine_cpuutilization_average{dimension_CacheClusterId=~\"discourse-redis-.*\"})",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1707,14 +1735,18 @@
         "h": 3
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "avg(aws_elasticache_freeable_memory_average{dimension_CacheClusterId=~\"discourse-redis-.*\"})",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1746,14 +1778,18 @@
         "h": 3
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "avg(aws_elasticache_curr_connections_average{dimension_CacheClusterId=~\"discourse-redis-.*\"})",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1785,14 +1821,18 @@
         "h": 3
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "avg(aws_elasticache_bytes_used_for_cache_average{dimension_CacheClusterId=~\"discourse-redis-.*\"})",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1824,14 +1864,18 @@
         "h": 3
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "sum(increase(aws_elasticache_evictions_sum{dimension_CacheClusterId=~\"discourse-redis-.*\"}[5m]))",
           "refId": "A",
-          "legendFormat": ""
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1863,19 +1907,27 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "sum(rate(aws_elasticache_cache_hits_sum{dimension_CacheClusterId=~\"discourse-redis-.*\"}[5m]))",
           "refId": "A",
-          "legendFormat": "hits"
+          "legendFormat": "hits",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         },
         {
           "expr": "sum(rate(aws_elasticache_cache_misses_sum{dimension_CacheClusterId=~\"discourse-redis-.*\"}[5m]))",
           "refId": "B",
-          "legendFormat": "misses"
+          "legendFormat": "misses",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {
@@ -1911,19 +1963,27 @@
         "h": 8
       },
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "victoriametrics"
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
       },
       "targets": [
         {
           "expr": "avg(aws_elasticache_network_bytes_in_average{dimension_CacheClusterId=~\"discourse-redis-.*\"})",
           "refId": "A",
-          "legendFormat": "in"
+          "legendFormat": "in",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         },
         {
           "expr": "avg(aws_elasticache_network_bytes_out_average{dimension_CacheClusterId=~\"discourse-redis-.*\"})",
           "refId": "B",
-          "legendFormat": "out"
+          "legendFormat": "out",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          }
         }
       ],
       "fieldConfig": {

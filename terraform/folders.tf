@@ -33,3 +33,7 @@ resource "grafana_folder" "bitergia" {
 resource "grafana_folder" "twenty" {
   title = "Twenty"
 }
+
+resource "grafana_folder" "discourse" {
+  title = "Discourse"
+}

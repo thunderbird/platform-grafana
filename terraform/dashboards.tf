@@ -106,3 +106,9 @@ resource "grafana_dashboard" "twenty_overview" {
   folder      = grafana_folder.twenty.id
   config_json = file("${path.module}/dashboards/twenty/overview.json")
 }
+
+# Discourse dashboards
+resource "grafana_dashboard" "discourse_overview" {
+  folder      = grafana_folder.discourse.id
+  config_json = file("${path.module}/dashboards/discourse/overview.json")
+}

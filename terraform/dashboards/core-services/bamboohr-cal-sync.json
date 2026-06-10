@@ -1,0 +1,207 @@
+{
+  "annotations": { "list": [] },
+  "description": "BambooHR time-off -> Who's Out calendar sync. Hourly CronJob in shared-services. Runbook: platform-infrastructure/docs/bamboohr-cal-sync.md",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "tags": ["bamboohr-cal-sync", "time-off"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "BambooHR Calendar Sync",
+  "uid": "bamboohr-cal-sync",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Time since last successful run",
+      "description": "Hourly cron; should stay under 1h. Alerts at >3h (BamboohrCalSyncStale).",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3600 },
+              { "color": "red", "value": 10800 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "time() - bamboohr_cal_sync_last_success_timestamp_seconds",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Errors (last run)",
+      "description": "Per-event errors in the most recent run. Alerts at >0 (BamboohrCalSyncErrors).",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "bamboohr_cal_sync_errors",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Last run duration",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 540 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "bamboohr_cal_sync_run_duration_seconds",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Last run changes",
+      "description": "Events created / updated / deleted in the most recent run.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_created", "legendFormat": "created", "instant": true },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_updated", "legendFormat": "updated", "instant": true },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_deleted", "legendFormat": "deleted", "instant": true }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Events changed per run",
+      "description": "Steady nonzero updated/deleted hour-over-hour can indicate flapping.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "fillOpacity": 40, "lineWidth": 1, "stacking": { "mode": "none" } }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_created", "legendFormat": "created" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_updated", "legendFormat": "updated" },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_deleted", "legendFormat": "deleted" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Run duration & errors",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "duration" }, "properties": [ { "id": "unit", "value": "s" } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_run_duration_seconds", "legendFormat": "duration" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_errors", "legendFormat": "errors" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Time since last success",
+      "description": "Sawtooth: resets to ~0 after each successful hourly run. A rising line that doesn't reset means the sync has stopped succeeding.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 10800 } ] }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "time() - bamboohr_cal_sync_last_success_timestamp_seconds", "legendFormat": "seconds since success" }
+      ]
+    }
+  ]
+}

@@ -95,6 +95,11 @@ resource "grafana_dashboard" "aws_load_balancer_controller" {
   config_json = file("${path.module}/dashboards/core-services/aws-load-balancer-controller.json")
 }
 
+resource "grafana_dashboard" "bamboohr_cal_sync" {
+  folder      = grafana_folder.core_services.id
+  config_json = file("${path.module}/dashboards/core-services/bamboohr-cal-sync.json")
+}
+
 # Bitergia dashboards
 resource "grafana_dashboard" "bitergia_infrastructure" {
   folder      = grafana_folder.bitergia.id

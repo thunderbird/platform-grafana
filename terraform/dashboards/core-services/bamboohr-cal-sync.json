@@ -1,15 +1,35 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
   "description": "BambooHR time-off -> Who's Out calendar sync. Hourly CronJob in shared-services. Runbook: platform-infrastructure/docs/bamboohr-cal-sync.md",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "links": [],
-  "tags": ["bamboohr-cal-sync", "time-off"],
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Runbook",
+      "type": "link",
+      "icon": "doc",
+      "url": "https://github.com/thunderbird/platform-infrastructure/blob/main/docs/bamboohr-cal-sync.md",
+      "targetBlank": true
+    }
+  ],
+  "tags": ["core-services", "bamboohr-cal-sync", "time-off"],
   "templating": { "list": [] },
   "time": { "from": "now-24h", "to": "now" },
   "timepicker": {},
-  "timezone": "utc",
+  "timezone": "",
   "title": "BambooHR Calendar Sync",
   "uid": "bamboohr-cal-sync",
   "schemaVersion": 39,
@@ -19,7 +39,7 @@
       "id": 1,
       "type": "stat",
       "title": "Time since last successful run",
-      "description": "Hourly cron; should stay under 1h. Alerts at >3h (BamboohrCalSyncStale).",
+      "description": "Hourly cron, so this sawtooths up to ~1h in normal operation. Yellow at 1.5h (a run was skipped), red at 3h (matches the BamboohrCalSyncStale alert).",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
       "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
       "fieldConfig": {
@@ -29,7 +49,7 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 3600 },
+              { "color": "yellow", "value": 5400 },
               { "color": "red", "value": 10800 }
             ]
           }
@@ -46,7 +66,43 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "time() - bamboohr_cal_sync_last_success_timestamp_seconds",
+          "expr": "time() - max(bamboohr_cal_sync_last_success_timestamp_seconds)",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Time since last CronJob fired",
+      "description": "From kube-state-metrics: time since the CronJob controller last created a Job. Confirms the schedule is firing even if the app pushed no metrics (distinguishes a dead/blocked CronJob from a quiet day).",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5400 },
+              { "color": "red", "value": 10800 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "time() - max(kube_cronjob_status_last_schedule_time{namespace=\"shared-services\", cronjob=\"bamboohr-cal-sync\"})",
           "instant": true
         }
       ]
@@ -55,9 +111,9 @@
       "id": 2,
       "type": "stat",
       "title": "Errors (last run)",
-      "description": "Per-event errors in the most recent run. Alerts at >0 (BamboohrCalSyncErrors).",
+      "description": "Per-event errors in the most recent run (pushed even on failed runs). Red at >0, matching the BamboohrCalSyncErrors alert.",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -81,7 +137,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "bamboohr_cal_sync_errors",
+          "expr": "max(bamboohr_cal_sync_errors)",
           "instant": true
         }
       ]
@@ -90,8 +146,9 @@
       "id": 3,
       "type": "stat",
       "title": "Last run duration",
+      "description": "Wall-clock of the last run. The CronJob's activeDeadlineSeconds is 600s, so a run approaching that is at risk of being killed: yellow at 300s, red at 540s (90% of the deadline).",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -116,7 +173,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-          "expr": "bamboohr_cal_sync_run_duration_seconds",
+          "expr": "max(bamboohr_cal_sync_run_duration_seconds)",
           "instant": true
         }
       ]
@@ -125,9 +182,9 @@
       "id": 4,
       "type": "stat",
       "title": "Last run changes",
-      "description": "Events created / updated / deleted in the most recent run.",
+      "description": "Events created / updated / deleted in the most recent run. 0/0/0 means a no-op run; cross-check the CronJob panel to tell a quiet day from a dead job.",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 5 },
       "fieldConfig": {
         "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } },
         "overrides": []
@@ -139,9 +196,9 @@
         "textMode": "value_and_name"
       },
       "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_created", "legendFormat": "created", "instant": true },
-        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_updated", "legendFormat": "updated", "instant": true },
-        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_deleted", "legendFormat": "deleted", "instant": true }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_events_created)", "legendFormat": "created", "instant": true },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_events_updated)", "legendFormat": "updated", "instant": true },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_events_deleted)", "legendFormat": "deleted", "instant": true }
       ]
     },
     {
@@ -150,7 +207,7 @@
       "title": "Events changed per run",
       "description": "Steady nonzero updated/deleted hour-over-hour can indicate flapping.",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 5 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 10 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -160,17 +217,18 @@
       },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_created", "legendFormat": "created" },
-        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_updated", "legendFormat": "updated" },
-        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_events_deleted", "legendFormat": "deleted" }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_events_created)", "legendFormat": "created" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_events_updated)", "legendFormat": "updated" },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_events_deleted)", "legendFormat": "deleted" }
       ]
     },
     {
       "id": 6,
       "type": "timeseries",
       "title": "Run duration & errors",
+      "description": "Run duration (left) against per-run error count. Sustained errors or a climbing duration warrant a look at the job logs.",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 5 },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 10 },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 } },
         "overrides": [
@@ -179,8 +237,8 @@
       },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_run_duration_seconds", "legendFormat": "duration" },
-        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "bamboohr_cal_sync_errors", "legendFormat": "errors" }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_run_duration_seconds)", "legendFormat": "duration" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "max(bamboohr_cal_sync_errors)", "legendFormat": "errors" }
       ]
     },
     {
@@ -189,7 +247,7 @@
       "title": "Time since last success",
       "description": "Sawtooth: resets to ~0 after each successful hourly run. A rising line that doesn't reset means the sync has stopped succeeding.",
       "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 19 },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -200,7 +258,7 @@
       },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "single", "sort": "none" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "time() - bamboohr_cal_sync_last_success_timestamp_seconds", "legendFormat": "seconds since success" }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "time() - max(bamboohr_cal_sync_last_success_timestamp_seconds)", "legendFormat": "seconds since success" }
       ]
     }
   ]

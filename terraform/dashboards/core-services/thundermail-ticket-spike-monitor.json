@@ -1,0 +1,260 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Thundermail Zendesk ticket-spike monitor. CronJob every 15m in the monitoring namespace on mzla-eks-workloads01; pushes counts-only metrics (no PII) to VictoriaMetrics. All ticket metrics are per-15-min-window. Pushes are sparse (every 15m), so queries use last_over_time([20m]) to bridge the gap. Runbook: zendesk-private-apps/thundermail-ticket-spike-monitor/README.md",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Runbook",
+      "type": "link",
+      "icon": "doc",
+      "url": "https://github.com/thunderbird/zendesk-private-apps/blob/main/thundermail-ticket-spike-monitor/README.md",
+      "targetBlank": true
+    },
+    {
+      "title": "Logs (CloudWatch)",
+      "type": "link",
+      "icon": "doc",
+      "url": "https://eu-central-1.console.aws.amazon.com/cloudwatch/home?region=eu-central-1#logsV2:log-groups/log-group/$252Feks$252Fmzla$252Fmzla-eks-workloads01$252Fapplications$3FfilterPattern$3Dthundermail-ticket-spike-monitor",
+      "targetBlank": true
+    }
+  ],
+  "tags": ["core-services", "thundermail-ticket-spike-monitor", "zendesk"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Thundermail Ticket Spike Monitor",
+  "uid": "thundermail-ticket-spike-monitor",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Monitor health",
+      "description": "zendesk_spike_monitor_up: 1 if the last run succeeded, 0 if it ran but failed (Zendesk API or vmagent push error). If this panel is empty, the job has not reported at all (image pull / missing Secret / CronJob not scheduling) - cross-check 'Time since last run'.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "last_over_time(zendesk_spike_monitor_up{job=\"thundermail-ticket-spike-monitor\"}[20m])",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Time since last run",
+      "description": "From kube-state-metrics: seconds since the CronJob controller last created a Job. Every 15m run resets it, so this sawtooths up to ~15m normally. Yellow at 30m (a run was skipped), red at 35m (matches the ...MonitorAbsent alert).",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1800 },
+              { "color": "red", "value": 2100 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "time() - max(kube_cronjob_status_last_schedule_time{namespace=\"monitoring\", cronjob=\"thundermail-ticket-spike-monitor\"})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Tickets this window",
+      "description": "zendesk_tickets_window: Thundermail tickets created in the most recent 15-min window. Counts only, no content.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "none",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "last_over_time(zendesk_tickets_window{job=\"thundermail-ticket-spike-monitor\"}[20m])",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Spike threshold (current)",
+      "description": "zendesk_spike_threshold: the self-calibrating Poisson 3-sigma threshold (floor SPIKE_MIN_WINDOW=5). A window exceeding this is a spike. Adapts automatically as volume grows.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "purple", "value": null } ] } },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "none",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+          "expr": "last_over_time(zendesk_spike_threshold{job=\"thundermail-ticket-spike-monitor\"}[20m])",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Ticket volume vs spike threshold",
+      "description": "The core view. Tickets per 15-min window (bars) against the spike threshold and the two baselines. When the bars cross the threshold line, the ...SpikeOnset alert fires (sustained 15m); 45m sustained escalates. All series share the same per-window unit.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 10, "w": 16, "x": 0, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "spanNulls": true, "stacking": { "mode": "none" } }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "tickets / window" }, "properties": [ { "id": "custom.drawStyle", "value": "bars" }, { "id": "custom.fillOpacity", "value": 50 }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } } ] },
+          { "matcher": { "id": "byName", "options": "spike threshold" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }, { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 4] } }, { "id": "custom.fillOpacity", "value": 0 } ] },
+          { "matcher": { "id": "byName", "options": "recent baseline (2h)" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "custom.lineWidth", "value": 1 } ] },
+          { "matcher": { "id": "byName", "options": "7-day avg" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "custom.lineWidth", "value": 1 } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_tickets_window{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "tickets / window" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_spike_threshold{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "spike threshold" },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_tickets_recent_window_avg{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "recent baseline (2h)" },
+        { "refId": "D", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_tickets_7d_window_avg{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "7-day avg" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Spike margin (threshold - window)",
+      "description": "Headroom before an alert: spike threshold minus current window. Drops to 0 / goes negative exactly when a spike is firing (red below the 0 line). A persistently small margin means volume is riding just under the threshold.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 5 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2, "spanNulls": true, "thresholdsStyle": { "mode": "line" } },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 0 } ] },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "min"] }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_spike_threshold{job=\"thundermail-ticket-spike-monitor\"}[20m]) - last_over_time(zendesk_tickets_window{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "margin" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Monitor up / down",
+      "description": "zendesk_spike_monitor_up over time. Drops to 0 on a run that failed (Zendesk API or vmagent push). Gaps (no line) mean the job did not report - distinct from up=0.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 20, "lineWidth": 2, "spanNulls": false },
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_spike_monitor_up{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "up" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Tickets per window vs 7-day average",
+      "description": "Current cadence (bars) against the 7-day rolling per-window average (line). Shows whether the queue is running hot or cold relative to the trailing week, independent of the spike threshold.",
+      "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "spanNulls": true }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "tickets / window" }, "properties": [ { "id": "custom.drawStyle", "value": "bars" }, { "id": "custom.fillOpacity", "value": 50 }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } } ] },
+          { "matcher": { "id": "byName", "options": "7-day avg" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }, { "id": "custom.fillOpacity", "value": 0 } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_tickets_window{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "tickets / window" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "P4169E866C3094E38" }, "expr": "last_over_time(zendesk_tickets_7d_window_avg{job=\"thundermail-ticket-spike-monitor\"}[20m])", "legendFormat": "7-day avg" }
+      ]
+    }
+  ]
+}

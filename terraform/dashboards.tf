@@ -100,6 +100,11 @@ resource "grafana_dashboard" "bamboohr_cal_sync" {
   config_json = file("${path.module}/dashboards/core-services/bamboohr-cal-sync.json")
 }
 
+resource "grafana_dashboard" "thundermail_ticket_spike_monitor" {
+  folder      = grafana_folder.core_services.id
+  config_json = file("${path.module}/dashboards/core-services/thundermail-ticket-spike-monitor.json")
+}
+
 # Bitergia dashboards
 resource "grafana_dashboard" "bitergia_infrastructure" {
   folder      = grafana_folder.bitergia.id

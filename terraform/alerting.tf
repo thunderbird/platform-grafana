@@ -25,8 +25,8 @@ resource "grafana_contact_point" "pagerduty_platform_infra" {
     class           = "grafana-alert"
     component       = "platform-infra"
     summary         = "{{ template \"default.message\" . }}"
-    # send resolved events so PD incidents auto-resolve when the alert clears.
-    send_resolved = true
+    # Resolved events are sent by default (disable_resolve_message defaults to
+    # false), so PD incidents auto-resolve when the alert clears.
   }
 }
 

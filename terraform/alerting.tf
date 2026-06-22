@@ -30,6 +30,26 @@ resource "grafana_contact_point" "pagerduty_platform_infra" {
   }
 }
 
+# Non-paging contact point (#559). Reuses the SAME PagerDuty Events API v2
+# integration key as the paging contact point, but sends PD severity=warning.
+# The PD service "Grafana Alerts - Platform Infrastructure" is configured for
+# severity-based urgency, so warning/info => LOW urgency => notified to Slack
+# (#mzla-pages) via the existing PagerDuty->Slack integration, with no phone
+# page. Used by the severity=warning and severity=ticket routes below.
+resource "grafana_contact_point" "pagerduty_platform_infra_low" {
+  name = "pagerduty-platform-infra-low"
+
+  disable_provenance = true
+
+  pagerduty {
+    integration_key = local.pagerduty_routing_key
+    severity        = "warning"
+    class           = "grafana-alert"
+    component       = "platform-infra"
+    summary         = "{{ template \"default.message\" . }}"
+  }
+}
+
 # NOTE: grafana_notification_policy is a per-org SINGLETON managing the root
 # tree. It MUST be `terraform import`ed before the first apply, otherwise a
 # clean "create" plan silently overwrites any UI-managed routing (and revert
@@ -61,6 +81,33 @@ resource "grafana_notification_policy" "root" {
       label = "severity"
       match = "=~"
       value = "page|critical"
+    }
+  }
+
+  # Non-paging routes (#559): severity=warning and severity=ticket -> the
+  # low-urgency PagerDuty contact point -> low-urgency PD incident -> Slack
+  # (#mzla-pages) via the PagerDuty->Slack integration. No phone page.
+  policy {
+    contact_point = grafana_contact_point.pagerduty_platform_infra_low.name
+    group_by      = ["alertname"]
+    continue      = false
+
+    matcher {
+      label = "severity"
+      match = "="
+      value = "warning"
+    }
+  }
+
+  policy {
+    contact_point = grafana_contact_point.pagerduty_platform_infra_low.name
+    group_by      = ["alertname"]
+    continue      = false
+
+    matcher {
+      label = "severity"
+      match = "="
+      value = "ticket"
     }
   }
 }

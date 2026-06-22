@@ -17,16 +17,16 @@
 # query overrides region to us-east-1.
 
 resource "grafana_rule_group" "euc1_federation_ha" {
-  name             = "euc1-federation-ha-dr"
-  folder_uid       = grafana_folder.keycloak.uid
-  interval_seconds = 60
+  name               = "euc1-federation-ha-dr"
+  folder_uid         = grafana_folder.keycloak.uid
+  interval_seconds   = 60
   disable_provenance = true
 
   # --- SSO primary endpoint health (PAGE) ---
   rule {
-    name      = "euc1: Keycloak SSO primary endpoint failing (Route53 health check)"
-    condition = "C"
-    for       = "3m"
+    name           = "euc1: Keycloak SSO primary endpoint failing (Route53 health check)"
+    condition      = "C"
+    for            = "3m"
     no_data_state  = "NoData"
     exec_err_state = "Error"
     labels = {
@@ -48,20 +48,20 @@ resource "grafana_rule_group" "euc1_federation_ha" {
         to   = 0
       }
       model = jsonencode({
-        refId           = "A"
-        datasource      = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_shared.uid }
-        queryMode       = "Metrics"
-        region          = "us-east-1"
-        namespace       = "AWS/Route53"
-        metricName      = "HealthCheckStatus"
-        dimensions      = { HealthCheckId = "0c8be94d-7d83-4950-9e08-84920d5842fa" }
-        statistic       = "Minimum"
-        period          = "60"
-        metricQueryType = 0
+        refId            = "A"
+        datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_shared.uid }
+        queryMode        = "Metrics"
+        region           = "us-east-1"
+        namespace        = "AWS/Route53"
+        metricName       = "HealthCheckStatus"
+        dimensions       = { HealthCheckId = "0c8be94d-7d83-4950-9e08-84920d5842fa" }
+        statistic        = "Minimum"
+        period           = "60"
+        metricQueryType  = 0
         metricEditorMode = 0
-        matchExact      = true
-        id              = ""
-        expression      = ""
+        matchExact       = true
+        id               = ""
+        expression       = ""
       })
     }
     data {
@@ -92,11 +92,11 @@ resource "grafana_rule_group" "euc1_federation_ha" {
         expression = "B"
         datasource = { type = "__expr__", uid = "__expr__" }
         conditions = [{
-          type     = "query"
+          type      = "query"
           evaluator = { type = "lt", params = [1] }
-          operator = { type = "and" }
-          query    = { params = ["C"] }
-          reducer  = { type = "last", params = [] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
         }]
       })
     }
@@ -104,9 +104,9 @@ resource "grafana_rule_group" "euc1_federation_ha" {
 
   # --- euc1 RDS read-replica lag (TICKET, non-paging) ---
   rule {
-    name      = "euc1: Keycloak DB read-replica lag high"
-    condition = "C"
-    for       = "15m"
+    name           = "euc1: Keycloak DB read-replica lag high"
+    condition      = "C"
+    for            = "15m"
     no_data_state  = "NoData"
     exec_err_state = "Error"
     labels = {
@@ -128,20 +128,20 @@ resource "grafana_rule_group" "euc1_federation_ha" {
         to   = 0
       }
       model = jsonencode({
-        refId           = "A"
-        datasource      = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_shared.uid }
-        queryMode       = "Metrics"
-        region          = "eu-central-1"
-        namespace       = "AWS/RDS"
-        metricName      = "ReplicaLag"
-        dimensions      = { DBInstanceIdentifier = "mzla-keycloak-staff-euc1" }
-        statistic       = "Average"
-        period          = "300"
-        metricQueryType = 0
+        refId            = "A"
+        datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_shared.uid }
+        queryMode        = "Metrics"
+        region           = "eu-central-1"
+        namespace        = "AWS/RDS"
+        metricName       = "ReplicaLag"
+        dimensions       = { DBInstanceIdentifier = "mzla-keycloak-staff-euc1" }
+        statistic        = "Average"
+        period           = "300"
+        metricQueryType  = 0
         metricEditorMode = 0
-        matchExact      = true
-        id              = ""
-        expression      = ""
+        matchExact       = true
+        id               = ""
+        expression       = ""
       })
     }
     data {
@@ -172,11 +172,11 @@ resource "grafana_rule_group" "euc1_federation_ha" {
         expression = "B"
         datasource = { type = "__expr__", uid = "__expr__" }
         conditions = [{
-          type     = "query"
+          type      = "query"
           evaluator = { type = "gt", params = [300] }
-          operator = { type = "and" }
-          query    = { params = ["C"] }
-          reducer  = { type = "last", params = [] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
         }]
       })
     }

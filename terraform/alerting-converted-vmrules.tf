@@ -51,17 +51,27 @@ resource "grafana_rule_group" "keycloak_dr_backup" {
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/blob/main/docs/keycloak-staff-sso.md"
     }
 
+    # A = seconds since the last successful aws-sso backup, computed with a 26h
+    # range (max_over_time) so it tolerates the SPARSE push cadence: the backup
+    # pushes keycloak_backup_* once per 6h run, so a bare instant selector is
+    # empty for ~5h55m of every cycle. The original VMRule's
+    # `(time()-max(...) > 26h) or absent_over_time([26h])` returns a series only
+    # when firing; ported verbatim into a Grafana instant query that empty result
+    # became NoData -> no_data_state=Alerting -> a spurious page every inter-push
+    # gap. max_over_time([26h]) instead always yields the real age while a sample
+    # exists in 26h, and yields NO data only when the backup has been absent for
+    # >26h (the genuine "CronJob stopped" case) -> NoData=Alerting then fires.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
       relative_time_range {
-        from = 600
+        from = 94320
         to   = 0
       }
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "(time() - max(keycloak_backup_last_success_timestamp_seconds{realm=\"aws-sso\"}) > 26 * 3600) or absent_over_time(keycloak_backup_success{realm=\"aws-sso\"}[26h])"
+        expr          = "time() - max_over_time(keycloak_backup_last_success_timestamp_seconds{realm=\"aws-sso\"}[26h])"
         instant       = true
         range         = false
         intervalMs    = 1000
@@ -97,7 +107,7 @@ resource "grafana_rule_group" "keycloak_dr_backup" {
         datasource = { type = "__expr__", uid = "__expr__" }
         conditions = [{
           type      = "query"
-          evaluator = { type = "gt", params = [0] }
+          evaluator = { type = "gt", params = [93600] }
           operator  = { type = "and" }
           query     = { params = ["C"] }
           reducer   = { type = "last", params = [] }

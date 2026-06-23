@@ -110,4 +110,30 @@ resource "grafana_notification_policy" "root" {
       value = "ticket"
     }
   }
+
+  # Deadman heartbeat (#560). The deadman-heartbeat rule (terraform/deadman.tf)
+  # carries label deadman=true and fires continuously while the alerting stack
+  # is healthy. This sibling route delivers each heartbeat to the deadman-ingest
+  # webhook contact point, which POSTs to the off-cluster AWS watcher. Tight
+  # timers so a ping lands well inside the watcher staleness window.
+  #
+  # NOTE: Grafana's unified alerting enforces a group_interval/repeat_interval
+  # floor and coerces sub-floor values; the EFFECTIVE ping cadence (likely ~1m)
+  # is the input to the watcher's STALENESS_SECONDS (set well ABOVE it). Confirm
+  # the accepted minimums at apply time.
+  policy {
+    contact_point = grafana_contact_point.deadman_ingest.name
+    group_by      = ["alertname"]
+    continue      = false
+
+    group_wait      = "0s"
+    group_interval  = "1m"
+    repeat_interval = "1m"
+
+    matcher {
+      label = "deadman"
+      match = "="
+      value = "true"
+    }
+  }
 }

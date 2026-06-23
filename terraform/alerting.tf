@@ -24,7 +24,10 @@ resource "grafana_contact_point" "pagerduty_platform_infra" {
     severity        = "critical"
     class           = "grafana-alert"
     component       = "platform-infra"
-    summary         = "{{ template \"default.message\" . }}"
+    # Concise one-liner for the PD incident title / Slack (#mzla-pages). The
+    # full description + runbook_url remain on the PD incident; we deliberately
+    # do NOT use the default.message template, which dumps all labels/annotations.
+    summary = "[{{ .CommonLabels.severity }}] {{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}"
     # Resolved events are sent by default (disable_resolve_message defaults to
     # false), so PD incidents auto-resolve when the alert clears.
   }
@@ -46,7 +49,10 @@ resource "grafana_contact_point" "pagerduty_platform_infra_low" {
     severity        = "warning"
     class           = "grafana-alert"
     component       = "platform-infra"
-    summary         = "{{ template \"default.message\" . }}"
+    # Concise one-liner for the PD incident title / Slack (#mzla-pages). The
+    # full description + runbook_url remain on the PD incident; we deliberately
+    # do NOT use the default.message template, which dumps all labels/annotations.
+    summary = "[{{ .CommonLabels.severity }}] {{ .CommonLabels.alertname }}: {{ .CommonAnnotations.summary }}"
   }
 }
 

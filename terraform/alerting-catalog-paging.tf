@@ -1203,8 +1203,8 @@ resource "grafana_rule_group" "catalog_argocd" {
       service  = "argocd"
     }
     annotations = {
-      summary     = "An ArgoCD application is Degraded on shared01"
-      description = "An ArgoCD app has been health_status=Degraded for 15m — a tracked resource failed its runtime health check (crash-loop, failed readiness, stuck PVC) even if Git-synced. Sustained >15m usually means a real managed service (Traefik/Keycloak/vmauth) is broken. Matches only Degraded (excludes transient Progressing/Missing)."
+      summary     = "ArgoCD application {{ $labels.name }} is Degraded on shared01"
+      description = "ArgoCD application {{ $labels.name }} has been health_status=Degraded for 15m — a tracked resource failed its runtime health check (crash-loop, failed readiness, stuck PVC) even if Git-synced. Sustained >15m usually means a real managed service (Traefik/Keycloak/vmauth) is broken. Matches only Degraded (excludes transient Progressing/Missing)."
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
     }
 
@@ -1218,7 +1218,10 @@ resource "grafana_rule_group" "catalog_argocd" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum(argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\"})"
+        # `sum by (name)` keeps one series per ArgoCD app so the alert fires as a
+        # separate instance per degraded app (label `name`), surfaced in the page
+        # via {{ $labels.name }} and the per-app notification route below.
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

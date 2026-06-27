@@ -1208,6 +1208,9 @@ resource "grafana_rule_group" "catalog_argocd" {
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
     }
 
+    # `sum by (name)` keeps one series per ArgoCD app so the alert fires as a
+    # separate instance per degraded app (label `name`), surfaced in the page
+    # via {{ $labels.name }} and the per-app notification route in alerting.tf.
     data {
       ref_id         = "A"
       datasource_uid = var.prometheus_datasource_uid
@@ -1218,9 +1221,6 @@ resource "grafana_rule_group" "catalog_argocd" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        # `sum by (name)` keeps one series per ArgoCD app so the alert fires as a
-        # separate instance per degraded app (label `name`), surfaced in the page
-        # via {{ $labels.name }} and the per-app notification route below.
         expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\"})"
         instant       = true
         intervalMs    = 1000

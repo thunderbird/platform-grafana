@@ -140,10 +140,18 @@ resource "grafana_rule_group" "tailscale" {
       service  = "tailscale"
     }
     annotations = {
-      summary     = "Tailscale operator pod down >5m on shared01"
-      description = "The Tailscale operator is reporting fewer than 1 up target in the tailscale namespace on shared01. Tailnet admin access (operator-managed proxies and ingress) may be impaired. Check the tailscale-operator deployment in the tailscale namespace."
+      summary     = "Tailscale operator down >5m on shared01"
+      description = "The tailscale-operator Deployment on shared01 has <1 available replica. Tailnet admin access (operator-managed proxies and ingress) may be impaired. Check: kubectl -n tailscale get deploy operator; kubectl -n tailscale describe deploy operator."
     }
 
+    # A = 1 when the operator Deployment has 0 available replicas, 0 when healthy.
+    # The original `sum(up{namespace="tailscale", job=~".*tailscale-operator.*"})`
+    # was a conversion artifact: the operator is NOT scraped (no `up` series exists
+    # for the tailscale namespace on any cluster), so the verbatim port returned an
+    # empty result -> NoData -> no_data_state=Alerting -> a permanent spurious fire.
+    # kube_deployment_status_replicas_available is continuously scraped by
+    # kube-state-metrics and yields a real value while the Deployment exists; it
+    # goes NoData only if the Deployment is deleted (a genuine outage) -> Alerting.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
@@ -154,7 +162,7 @@ resource "grafana_rule_group" "tailscale" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "sum(up{namespace=\"tailscale\", job=~\".*tailscale-operator.*\"}) < 1"
+        expr          = "1 - max(kube_deployment_status_replicas_available{cluster=\"mzla-eks-shared01\", namespace=\"tailscale\", deployment=\"operator\"})"
         instant       = true
         range         = false
         intervalMs    = 1000
@@ -282,10 +290,17 @@ resource "grafana_rule_group" "tailscale" {
       service  = "tailscale"
     }
     annotations = {
-      summary     = "operator-oauth ExternalSecret returning sync errors"
-      description = "The operator-oauth ExternalSecret in the tailscale namespace is returning sync errors (external_secrets_sync_calls_error_total rate > 0 over 15m). If the OAuth client secret goes stale the Tailscale operator loses tailnet auth. Check the ExternalSecret and its SecretStore in the tailscale namespace."
+      summary     = "operator-oauth ExternalSecret not Ready in tailscale namespace"
+      description = "The operator-oauth ExternalSecret (tailscale namespace) has Ready=False, so ESO is not reconciling the OAuth client secret. If the secret goes stale the Tailscale operator loses tailnet auth. Check: kubectl -n tailscale describe externalsecret operator-oauth and its SecretStore."
     }
 
+    # A = 1 when the operator-oauth ExternalSecret is Ready=False, 0 when Ready.
+    # The original `rate(external_secrets_sync_calls_error_total{namespace="tailscale"...})`
+    # never matched anything: the metric is `externalsecret_sync_calls_error` (no
+    # `external_secrets`/`_total` form exists), and ESO labels the target namespace
+    # as `exported_namespace`, not `namespace` (which is ESO's own ns). The rule was
+    # silently blind (no_data_state=OK). externalsecret_status_condition is
+    # continuously scraped and present whether Ready or not.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
@@ -296,7 +311,7 @@ resource "grafana_rule_group" "tailscale" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "rate(external_secrets_sync_calls_error_total{namespace=\"tailscale\", name=\"operator-oauth\"}[15m]) > 0"
+        expr          = "externalsecret_status_condition{exported_namespace=\"tailscale\", name=\"operator-oauth\", condition=\"Ready\", status=\"False\"}"
         instant       = true
         range         = false
         intervalMs    = 1000
@@ -358,7 +373,7 @@ resource "grafana_rule_group" "euc1_cert_expiry" {
     name           = "EUC1CertExpiringIn14Days"
     condition      = "C"
     for            = "1h"
-    no_data_state  = "NoData"
+    no_data_state  = "OK"
     exec_err_state = "Error"
     labels = {
       severity = "ticket"
@@ -431,7 +446,7 @@ resource "grafana_rule_group" "euc1_cert_expiry" {
     name           = "EUC1CertNotReady"
     condition      = "C"
     for            = "15m"
-    no_data_state  = "NoData"
+    no_data_state  = "OK"
     exec_err_state = "Error"
     labels = {
       severity = "ticket"
@@ -444,6 +459,11 @@ resource "grafana_rule_group" "euc1_cert_expiry" {
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/blob/main/docs/keycloak-staff-sso.md"
     }
 
+    # condition="False" series = 1 when the cert's Ready condition is False, 0 when
+    # Ready. The previous `{condition="True"} == 0` was a real logic bug: not-ready
+    # made it emit value 0, which never crosses the `gt 0` threshold (and ready made
+    # it empty), so the alert could never fire. This form emits 1 (fires) when not
+    # Ready and 0 (Normal) when Ready.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
@@ -454,7 +474,7 @@ resource "grafana_rule_group" "euc1_cert_expiry" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "certmanager_certificate_ready_status{namespace=\"keycloak\", name=\"keycloak-tls\", condition=\"True\"} == 0"
+        expr          = "certmanager_certificate_ready_status{namespace=\"keycloak\", name=\"keycloak-tls\", condition=\"False\"}"
         instant       = true
         range         = false
         intervalMs    = 1000

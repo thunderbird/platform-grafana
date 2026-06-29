@@ -76,6 +76,24 @@ resource "grafana_notification_policy" "root" {
   group_interval  = "5m"
   repeat_interval = "4h"
 
+  # Per-app route for ArgoCDApplicationDegraded. MUST stay ABOVE the generic
+  # paging route below: routes are evaluated in order and this alert carries
+  # severity=page, so the generic route would otherwise group all degraded apps
+  # into one incident. Grouping by `name` (the per-app label from `sum by (name)`)
+  # yields one PagerDuty incident per degraded app, each auto-resolving on its
+  # own, with the app name in the title via {{ $labels.name }}.
+  policy {
+    contact_point = grafana_contact_point.pagerduty_platform_infra.name
+    group_by      = ["alertname", "name"]
+    continue      = false
+
+    matcher {
+      label = "alertname"
+      match = "="
+      value = "ArgoCDApplicationDegraded"
+    }
+  }
+
   policy {
     contact_point = grafana_contact_point.pagerduty_platform_infra.name
     group_by      = ["alertname"]

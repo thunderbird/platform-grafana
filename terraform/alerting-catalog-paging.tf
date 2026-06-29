@@ -1211,6 +1211,10 @@ resource "grafana_rule_group" "catalog_argocd" {
     # `sum by (name)` keeps one series per ArgoCD app so the alert fires as a
     # separate instance per degraded app (label `name`), surfaced in the page
     # via {{ $labels.name }} and the per-app notification route in alerting.tf.
+    # thundermail-ticket-spike-monitor is excluded: it is a non-critical CronJob
+    # (Zendesk count poller) whose transient run failures hold the ArgoCD app
+    # Degraded for up to ~45m and page platform on-call. De-paged per
+    # thunderbird/platform-infrastructure#611 (durable fix = monitor resilience).
     data {
       ref_id         = "A"
       datasource_uid = var.prometheus_datasource_uid
@@ -1221,7 +1225,7 @@ resource "grafana_rule_group" "catalog_argocd" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\"})"
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!=\"thundermail-ticket-spike-monitor\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

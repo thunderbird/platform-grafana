@@ -223,6 +223,9 @@ resource "grafana_rule_group" "tailscale" {
       description = "A Tailscale proxy pod (ts-*) in the tailscale namespace has restarted more than 5 times in the last 15m. The corresponding tailnet-exposed service may be flapping. increase(...[15m]) is used so the alert clears once the pod stabilizes."
     }
 
+    # No `> 5` in query A: keep one series per pod with its 15m restart increase
+    # (0 when stable) so the healthy state returns data (Normal) instead of an empty
+    # result (NoData). The >5 threshold lives in node C below.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
@@ -233,7 +236,7 @@ resource "grafana_rule_group" "tailscale" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"tailscale\", pod=~\"ts-.*\"}[15m])) > 5"
+        expr          = "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"tailscale\", pod=~\"ts-.*\"}[15m]))"
         instant       = true
         range         = false
         intervalMs    = 1000
@@ -269,7 +272,7 @@ resource "grafana_rule_group" "tailscale" {
         datasource = { type = "__expr__", uid = "__expr__" }
         conditions = [{
           type      = "query"
-          evaluator = { type = "gt", params = [0] }
+          evaluator = { type = "gt", params = [5] }
           operator  = { type = "and" }
           query     = { params = ["C"] }
           reducer   = { type = "last", params = [] }
@@ -396,7 +399,7 @@ resource "grafana_rule_group" "euc1_cert_expiry" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "(certmanager_certificate_expiration_timestamp_seconds{namespace=\"keycloak\", name=\"keycloak-tls\"} - time()) < 14 * 24 * 3600"
+        expr          = "((certmanager_certificate_expiration_timestamp_seconds{namespace=\"keycloak\", name=\"keycloak-tls\"} - time()) < 14 * 24 * 3600) or vector(0)"
         instant       = true
         range         = false
         intervalMs    = 1000

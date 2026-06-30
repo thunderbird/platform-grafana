@@ -83,7 +83,7 @@ resource "grafana_rule_group" "catalog_kubernetes" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "count(kube_node_status_condition{cluster=\"mzla-eks-shared01\",condition=\"Ready\",status=\"true\"} == 0 and on(node) kube_node_spec_unschedulable{cluster=\"mzla-eks-shared01\"} == 0)"
+        expr          = "count(kube_node_status_condition{cluster=\"mzla-eks-shared01\",condition=\"Ready\",status=\"true\"} == 0 and on(node) kube_node_spec_unschedulable{cluster=\"mzla-eks-shared01\"} == 0) or vector(0)"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200
@@ -227,7 +227,7 @@ resource "grafana_rule_group" "catalog_kubernetes" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "count((kubelet_volume_stats_available_bytes{cluster=\"mzla-eks-shared01\"} / kubelet_volume_stats_capacity_bytes{cluster=\"mzla-eks-shared01\"}) < 0.05 and kubelet_volume_stats_used_bytes{cluster=\"mzla-eks-shared01\"} > 0)"
+        expr          = "count((kubelet_volume_stats_available_bytes{cluster=\"mzla-eks-shared01\"} / kubelet_volume_stats_capacity_bytes{cluster=\"mzla-eks-shared01\"}) < 0.05 and kubelet_volume_stats_used_bytes{cluster=\"mzla-eks-shared01\"} > 0) or vector(0)"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200
@@ -299,7 +299,7 @@ resource "grafana_rule_group" "catalog_kubernetes" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "count(max_over_time(kube_pod_container_status_waiting_reason{cluster=\"mzla-eks-shared01\",reason=\"CrashLoopBackOff\",namespace=~\"monitoring|keycloak|teleport|argocd|external-secrets|kube-system|traefik\"}[5m]) >= 1)"
+        expr          = "count(max_over_time(kube_pod_container_status_waiting_reason{cluster=\"mzla-eks-shared01\",reason=\"CrashLoopBackOff\",namespace=~\"monitoring|keycloak|teleport|argocd|external-secrets|kube-system|traefik\"}[5m]) >= 1) or vector(0)"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200
@@ -979,7 +979,7 @@ resource "grafana_rule_group" "catalog_keycloak" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum(rate(http_server_requests_seconds_count{cluster=\"mzla-eks-shared01\",namespace=\"keycloak\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{cluster=\"mzla-eks-shared01\",namespace=\"keycloak\"}[5m]))"
+        expr          = "(sum(rate(http_server_requests_seconds_count{cluster=\"mzla-eks-shared01\",namespace=\"keycloak\",status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count{cluster=\"mzla-eks-shared01\",namespace=\"keycloak\"}[5m]))) or vector(0)"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

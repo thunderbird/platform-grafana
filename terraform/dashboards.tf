@@ -122,3 +122,18 @@ resource "grafana_dashboard" "discourse_overview" {
   folder      = grafana_folder.discourse.id
   config_json = file("${path.module}/dashboards/discourse/overview.json")
 }
+
+# Appointment dashboards
+#
+# First dashboard in this repo that queries CloudWatch rather than VictoriaMetrics.
+# dashboards.tf uses file(), not templatefile(), so no Terraform value can be
+# interpolated into the JSON — the datasource UID is a literal, exactly as the
+# VictoriaMetrics UID (P4169E866C3094E38) already is in every other dashboard. The
+# literal used here is "cfjasvpsecqo0c" = grafana_data_source.cloudwatch_tb_dev. If
+# that datasource is ever recreated, update the JSON (see README, "Adding a New
+# Dashboard"). Region is overridden to us-east-1 per query — see the header comment
+# in alerting-appointment-edge.tf for why there is no separate us-east-1 datasource.
+resource "grafana_dashboard" "appointment_cloudfront_edge" {
+  folder      = grafana_folder.appointment.id
+  config_json = file("${path.module}/dashboards/appointment/cloudfront-edge.json")
+}

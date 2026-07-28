@@ -20,7 +20,8 @@ platform-grafana/
 │       ├── argocd/              # App sync/health, operational metrics
 │       ├── teleport/            # Sessions, backend/audit
 │       ├── keycloak/            # Login rates, sessions, JVM
-│       └── core-services/       # ESO, external-dns, cert-manager, AWS LB
+│       ├── core-services/       # ESO, external-dns, cert-manager, AWS LB
+│       └── appointment/         # CloudFront edge (CloudWatch, not VictoriaMetrics)
 ```
 
 ## Running Locally
@@ -39,6 +40,8 @@ terraform apply
 Dashboard JSON files live in `terraform/dashboards/`. Each file is loaded by a `grafana_dashboard` resource in `dashboards.tf`.
 
 Datasource references in JSON use the VictoriaMetrics datasource UID (`P4169E866C3094E38`). If the datasource is ever recreated, update `terraform.tfvars` and the JSON files.
+
+One dashboard queries CloudWatch instead: `dashboards/appointment/cloudfront-edge.json` uses the cross-account tb-dev CloudWatch datasource UID (`cfjasvpsecqo0c` = `grafana_data_source.cloudwatch_tb_dev`). Because `dashboards.tf` loads JSON with `file()` rather than `templatefile()`, that UID is a literal and carries the same caveat: recreate the datasource and the literal must be updated by hand.
 
 ### Modifying a Dashboard
 

@@ -1,0 +1,630 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "CloudFront edge for appointment.tb-dev.thunderbird.dev. All AWS/CloudFront metrics are us-east-1 only, so every query overrides the region on the eu-central-1-default tb-dev CloudWatch datasource. Cache Hit Rate and Origin Latency require the per-distribution MonitoringSubscription (platform-infrastructure #826, Pulumi half) and are empty until it exists.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Issue #826 \u2014 appointment edge observability",
+      "tooltip": "",
+      "type": "link",
+      "url": "https://github.com/thunderbird/platform-infrastructure/issues/826"
+    }
+  ],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "### Appointment CloudFront edge \u2014 tb-dev (account 718959508124)\n\nCloudFront is a global service: **all `AWS/CloudFront` metrics are published in us-east-1 only**. Every query here overrides the datasource region to `us-east-1` (the `CloudWatch Logs \u2014 tb-dev01` datasource defaults to `eu-central-1`).\n\n**Panels that are expected to be empty until their prerequisite lands**\n\n- **Cache Hit Rate** and **Origin Latency** are CloudFront *additional* metrics. They do not exist until an `aws.cloudfront.MonitoringSubscription` is enabled on the distribution \u2014 the Pulumi half of https://github.com/thunderbird/platform-infrastructure/issues/826. Empty here means \"not subscribed\", not \"broken\".\n- **Every** panel needs `cloudwatch:GetMetricData` on the cross-account `mzla-tb-dev-grafana-cloudwatch` role, which today grants `logs:*` only. Same issue, same Pulumi half.\n- The distribution itself is created by https://github.com/thunderbird/platform-infrastructure/pull/844 (draft). Until it applies, the **Distribution** picker above is empty and every panel shows no data.\n\nCache hit rate is the success metric for this edge: a caching distribution that is not caching is a pure extra hop, i.e. a latency penalty. Read it **per cache behaviour** \u2014 the deliberately-uncached `/api/*` and `/fxa*` behaviours drag the distribution-wide aggregate below any naive \">90%\" target.",
+        "mode": "markdown"
+      },
+      "title": "Prerequisites and how to read this dashboard",
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 2,
+      "panels": [],
+      "title": "Traffic",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cfjasvpsecqo0c"
+      },
+      "description": "Total viewer requests served by the distribution (all edge locations). CloudFront publishes only Sum for this metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "Requests",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Requests",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cfjasvpsecqo0c"
+      },
+      "description": "Bytes downloaded by viewers for GET/HEAD/OPTIONS requests. CloudFront publishes only Sum for this metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "BytesDownloaded",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "BytesDownloaded",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Bytes Downloaded",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 5,
+      "panels": [],
+      "title": "Errors",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cfjasvpsecqo0c"
+      },
+      "description": "Percentage (0-100) of viewer requests answered with a 4xx. Restores parity with the legacy prod distribution, which got a 4xxErrorRate alarm for free from tb_pulumi.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "4xxErrorRate",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "4xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "4xx Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cfjasvpsecqo0c"
+      },
+      "description": "Percentage (0-100) of viewer requests answered with a 5xx. Alerted on at > 5% for 5m (severity=warning, Slack only) in terraform/alerting-appointment-edge.tf.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "5xxErrorRate",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "5xx Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 8,
+      "panels": [],
+      "title": "Cache and origin \u2014 requires the MonitoringSubscription",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cfjasvpsecqo0c"
+      },
+      "description": "Percentage (0-100) of viewer requests served from the edge cache. THE success metric for this distribution. REQUIRES the per-distribution CloudFront MonitoringSubscription (an *additional* metric). This panel is legitimately empty until the Pulumi half of https://github.com/thunderbird/platform-infrastructure/issues/826 lands \u2014 it is not a collection failure.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "CacheHitRate",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheHitRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Cache Hit Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "cfjasvpsecqo0c"
+      },
+      "description": "Time from CloudFront receiving a request to returning the last byte to the edge for origin-bound requests. Only percentile statistics are valid for this metric. REQUIRES the per-distribution CloudFront MonitoringSubscription (an *additional* metric). This panel is legitimately empty until the Pulumi half of https://github.com/thunderbird/platform-infrastructure/issues/826 lands \u2014 it is not a collection failure.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p50",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "OriginLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "p50"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "cfjasvpsecqo0c"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p90",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "OriginLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "p90"
+        }
+      ],
+      "title": "Origin Latency (p50 / p90)",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "appointment",
+    "cloudfront",
+    "tb-dev",
+    "edge"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "cfjasvpsecqo0c"
+        },
+        "definition": "dimension_values(us-east-1,AWS/CloudFront,Requests,DistributionId)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Distribution",
+        "multi": false,
+        "name": "distribution_id",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {},
+          "dimensionKey": "DistributionId",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "Requests",
+          "namespace": "AWS/CloudFront",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "us-east-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Appointment \u2014 CloudFront Edge (tb-dev)",
+  "uid": "appointment-cloudfront-edge",
+  "version": 1
+}

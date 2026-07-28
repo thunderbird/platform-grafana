@@ -37,3 +37,7 @@ resource "grafana_folder" "twenty" {
 resource "grafana_folder" "discourse" {
   title = "Discourse"
 }
+
+resource "grafana_folder" "appointment" {
+  title = "Appointment"
+}

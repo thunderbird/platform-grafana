@@ -1215,6 +1215,13 @@ resource "grafana_rule_group" "catalog_argocd" {
     # (Zendesk count poller) whose transient run failures hold the ArgoCD app
     # Degraded for up to ~45m and page platform on-call. De-paged per
     # thunderbird/platform-infrastructure#611 (durable fix = monitor resilience).
+    # tb-dev and tb-prod apps (project=~"tb-dev.*" / "tb-prod.*") are excluded here
+    # and handled by the warning-only ArgoCDApplicationDegradedTbDev /
+    # ArgoCDApplicationDegradedTbProd rules below (-> Slack, no page). tb-prod paging
+    # is PAUSED for now (recurring thundermail nginx CrashLoopBackOff); revert by
+    # dropping project!~"tb-prod.*" here and deleting the TbProd rule. ArgoCD runs on
+    # shared01 but manages apps across all clusters, so this cluster="mzla-eks-shared01"
+    # selector matches every destination; only shared + workloads still page.
     data {
       ref_id         = "A"
       datasource_uid = var.prometheus_datasource_uid
@@ -1225,7 +1232,163 @@ resource "grafana_rule_group" "catalog_argocd" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!=\"thundermail-ticket-spike-monitor\"})"
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!=\"thundermail-ticket-spike-monitor\",project!~\"tb-dev.*\",project!~\"tb-prod.*\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  # --- App Degraded on tb-dev: warning-only (Slack, no page) ---
+  # Same detection as ArgoCDApplicationDegraded but scoped to tb-dev-destined apps
+  # (project=~"tb-dev.*", all of which deploy to mzla-eks-tb-dev01). tb-dev is a
+  # dev cluster, so severity=warning routes via the notification policy to the
+  # low-urgency PagerDuty contact point (Slack #mzla-pages, no phone page) instead
+  # of paging on-call.
+  rule {
+    name           = "ArgoCDApplicationDegradedTbDev"
+    condition      = "C"
+    for            = "15m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-tb-dev01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application {{ $labels.name }} is Degraded on tb-dev"
+      description = "ArgoCD application {{ $labels.name }} (tb-dev cluster) has been health_status=Degraded for 15m. tb-dev is a dev environment, so this is warning-only (Slack, no page). Check the app in ArgoCD; if it is a real dev outage that needs attention, follow up manually."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-dev.*\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  # --- App Degraded on tb-prod: warning-only (Slack, no page) — TEMPORARY ---
+  # tb-prod paging is paused for now due to a recurring thundermail nginx
+  # CrashLoopBackOff that was waking on-call. Same detection as
+  # ArgoCDApplicationDegraded, scoped to tb-prod-destined apps (project=~"tb-prod.*",
+  # all deploy to mzla-eks-tb-prod01), severity=warning -> low-urgency PD -> Slack.
+  # RE-ENABLE once live services are cut over: delete this rule and drop
+  # project!~"tb-prod.*" from the ArgoCDApplicationDegraded query above
+  # (tracked in thunderbird/platform-infrastructure).
+  rule {
+    name           = "ArgoCDApplicationDegradedTbProd"
+    condition      = "C"
+    for            = "15m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-tb-prod01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application {{ $labels.name }} is Degraded on tb-prod"
+      description = "ArgoCD application {{ $labels.name }} (tb-prod cluster) has been health_status=Degraded for 15m. tb-prod paging is temporarily paused (warning-only, Slack), so this does NOT page on-call right now. Investigate; paging will be re-enabled after live-service cutover."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-prod.*\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

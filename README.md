@@ -41,7 +41,12 @@ Dashboard JSON files live in `terraform/dashboards/`. Each file is loaded by a `
 
 Datasource references in JSON use the VictoriaMetrics datasource UID (`P4169E866C3094E38`). If the datasource is ever recreated, update `terraform.tfvars` and the JSON files.
 
-One dashboard queries CloudWatch instead: `dashboards/appointment/cloudfront-edge.json` uses the cross-account tb-dev CloudWatch datasource UID (`cfjasvpsecqo0c` = `grafana_data_source.cloudwatch_tb_dev`). Because `dashboards.tf` loads JSON with `file()` rather than `templatefile()`, that UID is a literal and carries the same caveat: recreate the datasource and the literal must be updated by hand.
+One dashboard queries CloudWatch instead, and is the one file loaded with `templatefile()` rather than `file()`: `dashboards/appointment/cloudfront-edge.json.tftpl`. It takes two variables, so nothing about it has to be hand-copied:
+
+- `cloudwatch_tb_dev_uid` — `grafana_data_source.cloudwatch_tb_dev.uid`. That datasource is a managed resource with a server-assigned UID, so unlike the pre-existing, unmanaged VictoriaMetrics datasource it must never be written as a literal; a wrong literal applies cleanly and every panel renders "Datasource not found".
+- `appointment_distribution_id` — seeds the Distribution picker's default value and its filter regex, keeping the dashboard on the same distribution the alert rules query.
+
+A `.tftpl` file is still plain dashboard JSON: `${...}` is Terraform interpolation, while Grafana's own `$distribution_id` references are left alone by `templatefile()`.
 
 ### Modifying a Dashboard
 

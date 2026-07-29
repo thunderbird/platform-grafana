@@ -5,7 +5,9 @@
 #
 #   - CloudFront 5xx/4xx error rate            -> the edge is serving errors
 #   - Route53 HealthCheckStatus (synthetic)    -> the site is unreachable end-to-end
-#   - ACM DaysToExpiry < 21 on BOTH certs      -> a renewal is silently failing
+#   - ACM DaysToExpiry < 21 on all THREE certs -> a renewal is silently failing
+#     (us-east-1 viewer, eu-central-1 public ALB, eu-central-1 origin ALB — they are
+#     three distinct objects with three distinct failure modes; see the ACM section)
 #
 # ---------------------------------------------------------------------------
 # Region handling: per-query override, NOT a second datasource
@@ -16,8 +18,8 @@
 # a dedicated cloudwatch_tb_dev_use1 datasource, each query overrides `region` in its
 # model — the same trick alerting-euc1-dr.tf already uses for Route53 (see its header
 # comment). That matters here because this one file legitimately needs BOTH regions:
-# the CloudFront viewer cert lives in us-east-1 and the ALB cert in eu-central-1, and
-# a us-east-1-only datasource would split a single concern across two datasources
+# the CloudFront viewer cert lives in us-east-1 and the two ALB certs in eu-central-1,
+# and a us-east-1-only datasource would split a single concern across two datasources
 # while adding a duplicate entry to every Explore/panel picker. `defaultRegion` is
 # only a default; every CloudWatch query carries its own region.
 #
@@ -38,19 +40,31 @@
 # lever there was `or vector(0)`, which is PromQL and has no CloudWatch equivalent.
 # The CloudWatch equivalent in this repo is the state fields plus, here, count gates:
 #
-#   - Every group except the origin-cert one is count-gated on a var.appointment_*
-#     ID being non-empty. Until those IDs are set in terraform.tfvars the rules are
+#   - Every group except the public-ALB-cert one is count-gated on a var.appointment_*
+#     ID/ARN being non-empty. Until those are set in terraform.tfvars the rules are
 #     not created at all, so "not yet covered" reads as *absent* in the Grafana UI
 #     rather than as a green rule that is structurally incapable of firing.
-#   - no_data_state = "OK" wherever no data is a legitimately healthy state: a
-#     CloudFront distribution with no traffic publishes no datapoints, and the
-#     us-east-1 viewer cert publishes nothing until CloudFront attaches it.
-#     (Precedent: alerting-catalog-paging.tf:434 and :959.)
-#   - EXCEPT the eu-central-1 origin cert, which publishes DaysToExpiry today
-#     (verified read-only against ACM in 718959508124). For that one rule NoData is
-#     not healthy — it means the pinned CertificateArn no longer publishes, i.e. the
-#     load balancer controller re-minted the cert and the rule has gone blind. So it
-#     is no_data_state = "Alerting", the only thing that can surface a stale pin.
+#   - no_data_state = "OK" ONLY where no data is a legitimately healthy state, which
+#     here is exactly the two CloudFront *ErrorRate ratios (a distribution with no
+#     traffic publishes no datapoints, and a ratio over zero requests is not an
+#     error) and the us-east-1 viewer cert (publishes nothing until CloudFront
+#     attaches it). Precedent: alerting-catalog-paging.tf:434 and :959.
+#   - no_data_state = "Alerting" everywhere silence is itself a fault, i.e. every
+#     rule whose target publishes unconditionally once it exists:
+#       * the Route53 synthetic check. Route53 publishes HealthCheckStatus every 60s
+#         for every health check that exists, with no traffic dependency, and the
+#         group is already count-gated on the ID — so NoData can only mean the check
+#         was deleted or re-created under a new ID. This is the cutover's automated
+#         "it came back" signal, so it is the last rule that may go quietly green.
+#         (alerting-euc1-dr.tf:30 uses "NoData" for the same metric; "Alerting" is
+#         chosen here so the notification carries the rule name and annotations
+#         rather than routing as alertname=DatasourceNoData.)
+#       * the two in-use ALB certs, which publish DaysToExpiry today (verified
+#         read-only against ACM in 718959508124). NoData means the pinned
+#         CertificateArn no longer publishes, i.e. the load balancer controller
+#         re-minted the cert and the rule has gone blind — the only thing that can
+#         surface a stale pin.
+#     All of these keep severity = warning, so "Alerting" notifies Slack, not a page.
 #   - exec_err_state is driven by var.appointment_metrics_iam_granted rather than by
 #     a comment asking a human to remember. The cross-account role
 #     mzla-tb-dev-grafana-cloudwatch currently grants logs:* only — no
@@ -62,6 +76,18 @@
 # ---------------------------------------------------------------------------
 # Follow-up PR checklist (one file: terraform/terraform.tfvars)
 # ---------------------------------------------------------------------------
+#   0. appointment_origin_cert_arn      = "<ARN of the CloudFront ORIGIN ALB cert>".
+#      This is the cert in the CloudFront -> ALB TLS path and it is NOT the
+#      d324b88c-… one pinned below (that is the live PUBLIC Ingress's cert). Resolve
+#      it in 718959508124 / eu-central-1:
+#        aws acm list-certificates --region eu-central-1 \
+#          --query "CertificateSummaryList[?DomainName=='appointment-origin.tb-dev.thunderbird.dev']"
+#      or by the LBC resource tag
+#      ingress.k8s.aws/resource = amazon_issued/appointment-origin.tb-dev.thunderbird.dev-fbc1e38e
+#      (that suffix is sha256("appointment/appointment-origin-tb-dev")[:8], so it
+#      identifies the Ingress and is a positive assertion that the cert is a
+#      different object from d324b88c-…). Until this is set the CloudFront->origin
+#      handshake has no expiry coverage at all.
 #   1. appointment_distribution_id     = "<id from platform-infrastructure PR #844>"
 #   2. appointment_health_check_id     = "<id from the Pulumi half of #826>"
 #   3. appointment_metrics_iam_granted = true   — only once BOTH
@@ -377,10 +403,25 @@ resource "grafana_rule_group" "appointment_edge_synthetic" {
   disable_provenance = true
 
   rule {
-    name           = "AppointmentEdgeHealthCheckFailing"
-    condition      = "C"
-    for            = "3m"
-    no_data_state  = "OK"
+    name      = "AppointmentEdgeHealthCheckFailing"
+    condition = "C"
+    for       = "3m"
+    # Deliberately NOT "OK". Route53 publishes HealthCheckStatus unconditionally at
+    # 60s granularity for every health check that exists — it has no dependence on site
+    # traffic, unlike the CloudFront *ErrorRate ratios above where an empty result
+    # genuinely is healthy. This group is also count-gated on
+    # var.appointment_health_check_id, so by the time this rule exists at all an ID has
+    # been pinned. NoData therefore cannot mean "healthy and idle"; it can only mean the
+    # health check was deleted, Pulumi re-created it under a new ID, or cross-account
+    # read access was lost. Reading that as green would make the one rule that is
+    # supposed to be the cutover's automated "it came back" signal the rule most able to
+    # go quietly blind. "Alerting" rather than the weaker "NoData" of
+    # alerting-euc1-dr.tf:30 so the notification carries this rule's own name and
+    # annotations instead of routing as alertname=DatasourceNoData — the same choice the
+    # cert rules below make. `for = 3m` absorbs the first few evaluations after a new
+    # health check is created but has not yet published. severity is still warning, so
+    # this notifies Slack and does not page.
+    no_data_state  = "Alerting"
     exec_err_state = var.appointment_metrics_iam_granted ? "Error" : "OK"
     labels = {
       severity = "warning"
@@ -388,8 +429,8 @@ resource "grafana_rule_group" "appointment_edge_synthetic" {
       service  = "appointment"
     }
     annotations = {
-      summary     = "appointment.tb-dev.thunderbird.dev is failing its Route53 health check"
-      description = "The Route53 health check for https://appointment.tb-dev.thunderbird.dev/ is reporting unhealthy — the site is unreachable or no longer returns its SPA marker string. This is the automated 'it came back' signal for the CloudFront cutover: check the distribution, then the ALB origin, then the appointment pods on mzla-eks-tb-dev01. tb-dev is a dev environment, so this is warning-only (Slack, no page)."
+      summary     = "appointment.tb-dev.thunderbird.dev is failing its Route53 health check, or is no longer being measured"
+      description = "The Route53 health check for https://appointment.tb-dev.thunderbird.dev/ is reporting unhealthy — the site is unreachable or no longer returns its SPA marker string. This is the automated 'it came back' signal for the CloudFront cutover: check the distribution, then the ALB origin, then the appointment pods on mzla-eks-tb-dev01. If this fired on NoData instead, the health check ID pinned as appointment_health_check_id in terraform/terraform.tfvars has stopped publishing HealthCheckStatus — it was most likely deleted, or re-created under a new ID by a pulumi up on the edge stack — and the pin must be updated before this rule means anything again. tb-dev is a dev environment, so this is warning-only (Slack, no page)."
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/826"
     }
 
@@ -460,33 +501,58 @@ resource "grafana_rule_group" "appointment_edge_synthetic" {
 }
 
 # --- ACM certificate expiry ------------------------------------------------------
-# Both certs, not just the CloudFront one. They share a DNS-validation CNAME, so a
-# single missing Route53 record breaks renewal for BOTH — watching only one would
-# leave the other's failure invisible until the TLS outage.
+# THREE certificates are in play for this edge, not two, and they fail in different
+# ways. Getting the distinction wrong once already produced a rule named
+# "AppointmentOriginCertExpiring" that watched the public ALB's cert:
 #
-# Two rule *groups* rather than one, because the certs have different lifecycles: the
-# eu-central-1 ALB cert exists and publishes today, while the us-east-1 viewer cert
-# publishes nothing until CloudFront attaches it, so its group is count-gated on the
-# distribution ID exactly like the CloudFront error rules.
+#   1. us-east-1 925d197d-… — the CloudFront VIEWER cert for
+#      appointment.tb-dev.thunderbird.dev. Renewal failure = TLS error for every
+#      viewer. Publishes nothing until CloudFront attaches it, so count-gated.
+#   2. eu-central-1 d324b88c-… — the cert on the LIVE PUBLIC Ingress
+#      (appointment-tb-dev, host appointment.tb-dev.thunderbird.dev). This is NOT the
+#      CloudFront origin cert. It is watched because it is the CO-HOLDER of the single
+#      Route53 DNS-validation CNAME that the us-east-1 viewer cert also renews
+#      against: both certs cover the same domain, so ACM derives the same validation
+#      record name for both, and one deleted record silently breaks managed renewal on
+#      both (#816). Keeping this Ingress serving that host is what stops the LB
+#      Controller garbage-collecting that record — see the header of
+#      overlays/tb-dev/appointment/origin-ingress.yaml in thunderbird/appointment-deploy.
+#   3. eu-central-1, ARN TBD — the cert on the DEDICATED ORIGIN Ingress
+#      (appointment-origin-tb-dev, host appointment-origin.tb-dev.thunderbird.dev,
+#      platform-infrastructure #817). THIS is the cert in the CloudFront -> ALB TLS
+#      path: the distribution connects with OriginProtocolPolicy https-only and
+#      originSSLProtocols [TLSv1.2], so if this cert lapses CloudFront cannot complete
+#      the origin handshake and every viewer gets a hard 502. It is a separate,
+#      single-SAN, LBC-minted cert with its OWN validation CNAME, so the shared-record
+#      reasoning above does NOT transfer to it and cert 2 provides it no cover.
+#      Its ARN is not pinned yet — see step 0 of the follow-up checklist in the file
+#      header — so its group is count-gated on var.appointment_origin_cert_arn.
+#
+# Three rule *groups* rather than one because the three certs have three different
+# lifecycles and therefore three different gating decisions. Deliberately NOT solved by
+# dropping matchExact and taking a min across all dimensions in the namespace: that
+# would alert on every cert in the tb-dev account, including keycloak's and accounts',
+# which is outside this folder's ownership.
 #
 # interval_seconds is 600, not 60: ACM publishes DaysToExpiry roughly every 12 hours,
 # so evaluating once a minute is ~2,880 cross-account GetMetricData calls a day (each
 # behind an STS AssumeRole) to observe a value that moves once. 600 still divides the
 # 1h `for` exactly, which Grafana requires.
 
-# --- eu-central-1: ALB (origin) certificate ---
-# Neither count-gated nor no_data_state = "OK": this cert exists and publishes
-# DaysToExpiry today. Absence of data therefore means the pinned CertificateArn is
-# wrong — most likely because the AWS Load Balancer Controller re-minted the cert with
-# a new ARN when the Ingress was recreated — and a blind rule must not read as green.
-resource "grafana_rule_group" "appointment_edge_origin_cert_expiry" {
-  name               = "appointment-edge-origin-cert-expiry"
+# --- eu-central-1: PUBLIC ALB certificate (co-holder of the shared validation CNAME) -
+# Cert 2 above. Neither count-gated nor no_data_state = "OK": this cert exists and
+# publishes DaysToExpiry today. Absence of data therefore means the pinned
+# CertificateArn is wrong — most likely because the AWS Load Balancer Controller
+# re-minted the cert with a new ARN when the Ingress was recreated — and a blind rule
+# must not read as green.
+resource "grafana_rule_group" "appointment_edge_public_alb_cert_expiry" {
+  name               = "appointment-edge-public-alb-cert-expiry"
   folder_uid         = grafana_folder.appointment.uid
   interval_seconds   = 600
   disable_provenance = true
 
   rule {
-    name           = "AppointmentOriginCertExpiring"
+    name           = "AppointmentPublicAlbCertExpiring"
     condition      = "C"
     for            = "1h"
     no_data_state  = "Alerting"
@@ -497,8 +563,8 @@ resource "grafana_rule_group" "appointment_edge_origin_cert_expiry" {
       service  = "appointment"
     }
     annotations = {
-      summary     = "appointment tb-dev ALB origin certificate expires in < 21 days, or is no longer being measured"
-      description = "ACM certificate d324b88c-174e-4264-81af-a017c981b1a1 (eu-central-1, minted by the AWS Load Balancer Controller for the appointment ALB on mzla-eks-tb-dev01) has fewer than 21 days to expiry, so managed renewal has not completed. Check that the DNS validation CNAME still exists in Route53 — this cert shares its validation record with the us-east-1 CloudFront viewer cert, so one missing record breaks both. If this fired as NoData instead, the certificate ARN pinned in terraform/alerting-appointment-edge.tf has stopped publishing DaysToExpiry: the load balancer controller has almost certainly re-minted the cert under a new ARN, and the pin must be updated before this rule means anything again."
+      summary     = "appointment tb-dev PUBLIC ALB certificate expires in < 21 days, or is no longer being measured"
+      description = "ACM certificate d324b88c-174e-4264-81af-a017c981b1a1 (eu-central-1, minted by the AWS Load Balancer Controller for the LIVE PUBLIC appointment Ingress on mzla-eks-tb-dev01, host appointment.tb-dev.thunderbird.dev) has fewer than 21 days to expiry, so managed renewal has not completed. This is NOT the CloudFront origin cert — see AppointmentOriginAlbCertExpiring for that one. It matters because it co-holds the single Route53 DNS-validation CNAME that the us-east-1 CloudFront viewer cert renews against, so one missing record breaks renewal on both (platform-infrastructure #816): check that validation CNAME first, and check that an Ingress still serves appointment.tb-dev.thunderbird.dev, because the LB Controller garbage-collects that record if none does. If this fired as NoData instead, the certificate ARN pinned in terraform/alerting-appointment-edge.tf has stopped publishing DaysToExpiry: the load balancer controller has almost certainly re-minted the cert under a new ARN, and the pin must be updated before this rule means anything again."
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/826"
     }
 
@@ -612,6 +678,111 @@ resource "grafana_rule_group" "appointment_edge_viewer_cert_expiry" {
         namespace        = "AWS/CertificateManager"
         metricName       = "DaysToExpiry"
         dimensions       = { CertificateArn = "arn:aws:acm:us-east-1:718959508124:certificate/925d197d-5876-4978-b2ad-e685a8f03a19" }
+        statistic        = "Minimum"
+        period           = "86400"
+        metricQueryType  = 0
+        metricEditorMode = 0
+        matchExact       = true
+        id               = ""
+        expression       = ""
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 172800
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 172800
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "lt", params = [21] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+}
+
+# --- eu-central-1: ORIGIN ALB certificate (the CloudFront -> ALB TLS path) --------
+# Cert 3 in the list above, and the one whose lapse actually breaks the edge: the
+# distribution dials appointment-origin.tb-dev.thunderbird.dev with
+# OriginProtocolPolicy https-only, so a failed renewal here is a hard 502 for every
+# viewer, with no cover from the two rules above.
+#
+# Count-gated on var.appointment_origin_cert_arn rather than pinned inline. The cert is
+# minted by the AWS Load Balancer Controller from
+# appointment-deploy overlays/tb-dev/appointment/origin-ingress.yaml, so its ARN is not
+# knowable from this repo, and guessing one would produce a rule that queries a
+# non-existent dimension and — with no_data_state = "Alerting" — fires immediately and
+# permanently. Absent is honest; wrong is not. Resolving it is step 0 of the checklist
+# in the file header.
+#
+# Once the ARN IS pinned, no_data_state = "Alerting" for the same reason as the public
+# ALB cert: an in-use LBC cert publishes DaysToExpiry, so silence means the controller
+# re-minted it under a new ARN and this rule has gone blind.
+resource "grafana_rule_group" "appointment_edge_origin_alb_cert_expiry" {
+  count = var.appointment_origin_cert_arn == "" ? 0 : 1
+
+  name               = "appointment-edge-origin-alb-cert-expiry"
+  folder_uid         = grafana_folder.appointment.uid
+  interval_seconds   = 600
+  disable_provenance = true
+
+  rule {
+    name           = "AppointmentOriginAlbCertExpiring"
+    condition      = "C"
+    for            = "1h"
+    no_data_state  = "Alerting"
+    exec_err_state = var.appointment_metrics_iam_granted ? "Error" : "OK"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-tb-dev01"
+      service  = "appointment"
+    }
+    annotations = {
+      summary     = "appointment tb-dev CloudFront ORIGIN ALB certificate expires in < 21 days, or is no longer being measured"
+      description = "The ACM certificate on the dedicated CloudFront origin Ingress (eu-central-1, appointment-origin-tb-dev, host appointment-origin.tb-dev.thunderbird.dev, minted by the AWS Load Balancer Controller) has fewer than 21 days to expiry, so managed renewal has not completed. This is the certificate in the CloudFront -> ALB TLS path: CloudFront connects with OriginProtocolPolicy https-only, so if it lapses the origin handshake fails and EVERY viewer gets a 502, not just a TLS warning. Unlike the public ALB cert it has its own single-SAN DNS-validation CNAME in the ACK-managed sub-zone, so check that record specifically. If this fired as NoData instead, appointment_origin_cert_arn in terraform/terraform.tfvars is stale — the load balancer controller re-minted the cert under a new ARN (the LBC resource tag ingress.k8s.aws/resource is amazon_issued/appointment-origin.tb-dev.thunderbird.dev-fbc1e38e) and the pin must be updated. tb-dev is a dev environment, so this is warning-only (Slack, no page)."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/826"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = grafana_data_source.cloudwatch_tb_dev.uid
+      relative_time_range {
+        from = 172800
+        to   = 0
+      }
+      model = jsonencode({
+        refId            = "A"
+        datasource       = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_tb_dev.uid }
+        queryMode        = "Metrics"
+        region           = "eu-central-1"
+        namespace        = "AWS/CertificateManager"
+        metricName       = "DaysToExpiry"
+        dimensions       = { CertificateArn = var.appointment_origin_cert_arn }
         statistic        = "Minimum"
         period           = "86400"
         metricQueryType  = 0

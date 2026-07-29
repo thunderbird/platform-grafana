@@ -15,6 +15,16 @@ projects:
         - "*.tf"
         - "*.tfvars"
         - "dashboards/**/*.json"
+        # Templated dashboards, loaded with templatefile() rather than file().
+        # This list OVERRIDES Atlantis's built-in default of "**/*.tf*", so any
+        # dashboard source whose name does not end in .json matches nothing:
+        # without this line a PR that only edits
+        # dashboards/appointment/cloudfront-edge.json.tftpl produces no project,
+        # therefore no plan, no atlantis/plan commit status and nothing to apply.
+        # It would merge green and then ride silently into the next unrelated PR's
+        # plan, applied by a reviewer who never saw it. Keep both suffixes listed
+        # as more templated dashboards are added.
+        - "dashboards/**/*.tftpl"
       enabled: true
     apply_requirements: [approved, mergeable]
 

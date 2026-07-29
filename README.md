@@ -48,6 +48,8 @@ One dashboard queries CloudWatch instead, and is the one file loaded with `templ
 
 A `.tftpl` file is still plain dashboard JSON: `${...}` is Terraform interpolation, while Grafana's own `$distribution_id` references are left alone by `templatefile()`.
 
+If you add another templated dashboard, check `atlantis.yaml` first. Its `autoplan.when_modified` list **overrides** Atlantis's built-in `**/*.tf*` default, so a dashboard source is watched only if one of the listed globs matches its actual suffix — which is why both `dashboards/**/*.json` and `dashboards/**/*.tftpl` are listed. A dashboard file matched by neither produces no Atlantis project, so a PR touching only that file gets no plan, no `atlantis/plan` commit status and nothing to apply: it merges green, and the change then rides silently into whichever unrelated PR next triggers a plan, applied by a reviewer who never saw it.
+
 ### Modifying a Dashboard
 
 The easiest workflow for complex changes:

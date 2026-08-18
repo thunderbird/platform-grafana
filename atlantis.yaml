@@ -10,6 +10,7 @@ projects:
   - name: grafana
     dir: terraform
     workflow: grafana
+    terraform_version: v1.15.8
     autoplan:
       when_modified:
         - "*.tf"

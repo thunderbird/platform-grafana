@@ -20,7 +20,8 @@ platform-grafana/
 │       ├── argocd/              # App sync/health, operational metrics
 │       ├── teleport/            # Sessions, backend/audit
 │       ├── keycloak/            # Login rates, sessions, JVM
-│       └── core-services/       # ESO, external-dns, cert-manager, AWS LB
+│       ├── core-services/       # ESO, external-dns, cert-manager, AWS LB
+│       └── appointment/         # CloudFront edge (CloudWatch, not VictoriaMetrics)
 ```
 
 ## Running Locally
@@ -39,6 +40,15 @@ terraform apply
 Dashboard JSON files live in `terraform/dashboards/`. Each file is loaded by a `grafana_dashboard` resource in `dashboards.tf`.
 
 Datasource references in JSON use the VictoriaMetrics datasource UID (`P4169E866C3094E38`). If the datasource is ever recreated, update `terraform.tfvars` and the JSON files.
+
+One dashboard queries CloudWatch instead, and is the one file loaded with `templatefile()` rather than `file()`: `dashboards/appointment/cloudfront-edge.json.tftpl`. It takes two variables, so nothing about it has to be hand-copied:
+
+- `cloudwatch_tb_dev_uid` — `grafana_data_source.cloudwatch_tb_dev.uid`. That datasource is a managed resource with a server-assigned UID, so unlike the pre-existing, unmanaged VictoriaMetrics datasource it must never be written as a literal; a wrong literal applies cleanly and every panel renders "Datasource not found".
+- `appointment_distribution_id` — seeds the Distribution picker's default value and its filter regex, keeping the dashboard on the same distribution the alert rules query.
+
+A `.tftpl` file is still plain dashboard JSON: `${...}` is Terraform interpolation, while Grafana's own `$distribution_id` references are left alone by `templatefile()`.
+
+If you add another templated dashboard, check `atlantis.yaml` first. Its `autoplan.when_modified` list **overrides** Atlantis's built-in `**/*.tf*` default, so a dashboard source is watched only if one of the listed globs matches its actual suffix — which is why both `dashboards/**/*.json` and `dashboards/**/*.tftpl` are listed. A dashboard file matched by neither produces no Atlantis project, so a PR touching only that file gets no plan, no `atlantis/plan` commit status and nothing to apply: it merges green, and the change then rides silently into whichever unrelated PR next triggers a plan, applied by a reviewer who never saw it.
 
 ### Modifying a Dashboard
 

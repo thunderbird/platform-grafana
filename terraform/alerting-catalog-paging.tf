@@ -1211,10 +1211,17 @@ resource "grafana_rule_group" "catalog_argocd" {
     # `sum by (name)` keeps one series per ArgoCD app so the alert fires as a
     # separate instance per degraded app (label `name`), surfaced in the page
     # via {{ $labels.name }} and the per-app notification route in alerting.tf.
-    # thundermail-ticket-spike-monitor is excluded: it is a non-critical CronJob
-    # (Zendesk count poller) whose transient run failures hold the ArgoCD app
-    # Degraded for up to ~45m and page platform on-call. De-paged per
-    # thunderbird/platform-infrastructure#611 (durable fix = monitor resilience).
+    # Two non-critical CronJobs are excluded by name, both for the same reason: a
+    # transient run failure holds their ArgoCD app Degraded long enough to page
+    # platform on-call, and neither is worth waking anyone for.
+    #   - thundermail-ticket-spike-monitor (Zendesk count poller). De-paged per
+    #     thunderbird/platform-infrastructure#611; durable fix = monitor resilience.
+    #     Deliberately has NO warning rule -- fully de-paged.
+    #   - aaq-scraper (hourly scrape, project=workloads). Handled by the
+    #     warning-only ArgoCDApplicationDegradedAaqScraper rule below, so degradation
+    #     still surfaces in Slack rather than disappearing.
+    # The name!~ regex is anchored implicitly by Prometheus (full-string match), so
+    # these exclude exactly those two apps, not substrings.
     # tb-dev and tb-prod apps (project=~"tb-dev.*" / "tb-prod.*") are excluded here
     # and handled by the warning-only ArgoCDApplicationDegradedTbDev /
     # ArgoCDApplicationDegradedTbProd rules below (-> Slack, no page). tb-prod paging
@@ -1232,7 +1239,7 @@ resource "grafana_rule_group" "catalog_argocd" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!=\"thundermail-ticket-spike-monitor\",project!~\"tb-dev.*\",project!~\"tb-prod.*\"})"
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!~\"thundermail-ticket-spike-monitor|aaq-scraper\",project!~\"tb-dev.*\",project!~\"tb-prod.*\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200
@@ -1389,6 +1396,91 @@ resource "grafana_rule_group" "catalog_argocd" {
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
         expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-prod.*\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  # --- aaq-scraper Degraded: warning-only (Slack, no page) ---
+  # aaq-scraper is an hourly CronJob (schedule "0 * * * *", project=workloads). A single
+  # failed run leaves the ArgoCD app health_status=Degraded until the next successful
+  # run, which is up to an hour -- long past the 15m `for` -- so under the page rule it
+  # woke on-call for a job that self-heals on the next tick. Excluded from
+  # ArgoCDApplicationDegraded above and re-added here at severity=warning, which routes
+  # to pagerduty-platform-infra-low (Slack, no page), mirroring the TbDev/TbProd split.
+  #
+  # `for` is 60m rather than 15m on purpose: the CronJob runs hourly, so anything
+  # shorter fires on a single failed run. 60m means at least one scheduled retry has
+  # also failed before anyone is told.
+  #
+  # If aaq-scraper stops being best-effort, promote this back to severity=page by
+  # deleting this rule and dropping aaq-scraper from the name!~ exclusion above.
+  rule {
+    name           = "ArgoCDApplicationDegradedAaqScraper"
+    condition      = "C"
+    for            = "60m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-workloads01"
+      service  = "aaq-scraper"
+    }
+    annotations = {
+      summary     = "ArgoCD application aaq-scraper has been Degraded for 60m"
+      description = "aaq-scraper (hourly CronJob, project=workloads) has been health_status=Degraded for 60m, so at least one scheduled run has failed and the next one did not recover it. Warning-only by design -- this does NOT page. Check the most recent Job in the aaq-scraper namespace on mzla-eks-workloads01 and its pod logs. A single transient failure is expected to clear on the next hourly tick; 60m of Degraded means it is not clearing."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name=\"aaq-scraper\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

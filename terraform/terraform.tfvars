@@ -17,7 +17,7 @@ prometheus_datasource_uid = "P4169E866C3094E38"
 # CloudFront -> ALB TLS path, so leaving it empty means that handshake has no expiry
 # coverage — resolve it first. Setting all four is the follow-up PR that arms
 # everything; the checklist is in the .tf header.
-appointment_distribution_id     = ""
-appointment_health_check_id     = ""
-appointment_origin_cert_arn     = ""
-appointment_metrics_iam_granted = false
+appointment_distribution_id     = "E23SXSLKOB1ULS"
+appointment_health_check_id     = "c576809f-6068-4cf5-9101-ce4486648ee6"
+appointment_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/54127ee5-bc4c-47a4-883a-b407a4152ac2"
+appointment_metrics_iam_granted = true

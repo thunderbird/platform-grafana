@@ -148,3 +148,19 @@ resource "grafana_dashboard" "appointment_cloudfront_edge" {
     appointment_distribution_id = var.appointment_distribution_id
   })
 }
+
+# Send dashboards
+#
+# Same shape as the appointment dashboard above (see its header for why the datasource
+# uid and the distribution id are templated in). Two differences, both because Send's
+# edge is fully live where appointment's was not: the CacheHitRate/OriginLatency panels
+# read real data from day one (the MonitoringSubscription shipped with #895), and there
+# is an extra Synthetic health row driven by the live #1052 Route53 health check.
+resource "grafana_dashboard" "send_cloudfront_edge" {
+  folder = grafana_folder.send.id
+  config_json = templatefile("${path.module}/dashboards/send/cloudfront-edge.json.tftpl", {
+    cloudwatch_tb_dev_uid = grafana_data_source.cloudwatch_tb_dev.uid
+    send_distribution_id  = var.send_distribution_id
+    send_health_check_id  = var.send_health_check_id
+  })
+}

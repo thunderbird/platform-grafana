@@ -40,3 +40,37 @@ variable "appointment_metrics_iam_granted" {
   type        = bool
   default     = false
 }
+
+# --- Send CloudFront edge (platform-infrastructure #1043) -----------------------
+# Unlike appointment's, every Send edge resource below EXISTS TODAY. The distribution
+# (E1O1C4QY9LB2MO), its MonitoringSubscription, all three certificates and the Route53
+# health check shipped with platform-infrastructure #895 / #1052, and the cross-account
+# Grafana CloudWatch grant is live (#951, extended by #1048). So these are pinned in
+# terraform.tfvars from the start rather than left empty for a follow-up PR, and the
+# metrics-IAM flag defaults true. The variables are kept (rather than inlining the ids)
+# only so an id going stale disables its group via count instead of firing NoData on a
+# dead dimension — the same discipline alerting-appointment-edge.tf documents at length;
+# that header is normative for the shared rationale and is not restated here.
+variable "send_distribution_id" {
+  description = "CloudFront distribution ID for the tb-dev Send edge (E1O1C4QY9LB2MO, platform-infrastructure #895). Also seeds the Distribution picker's default and filter regex on the send cloudfront-edge dashboard. Empty string disables the CloudFront, origin-latency and viewer-cert rule groups."
+  type        = string
+  default     = ""
+}
+
+variable "send_health_check_id" {
+  description = "Route53 health check ID for https://send.tb-dev.thunderbird.dev/api/health (da628e81-e6ef-41fc-baa1-e48009de8682, HTTPS_STR_MATCH on \"API is alive\", platform-infrastructure #1052). Empty string disables the synthetic-check rule group."
+  type        = string
+  default     = ""
+}
+
+variable "send_origin_cert_arn" {
+  description = "Full ACM ARN of the certificate on the DEDICATED CloudFront ORIGIN Ingress (eu-central-1, host send-origin.tb-dev.thunderbird.dev). This is the certificate in the CloudFront -> ALB TLS path and is a DIFFERENT object from the public Ingress cert pinned inline in alerting-send-edge.tf. It is minted by the AWS Load Balancer Controller from thunderbird/send-deploy, so it is a variable — if the controller re-mints it under a new ARN the pin can go stale. Empty string disables the origin-ALB cert-expiry rule group."
+  type        = string
+  default     = ""
+}
+
+variable "send_metrics_iam_granted" {
+  description = "Whether the cross-account role mzla-tb-dev-grafana-cloudwatch can read CloudWatch metrics in 718959508124. This is already true for Send (platform-infrastructure #951 granted cloudwatch:GetMetricData on \"*\", #1048 extended the grant), so it defaults true and the edge rules use exec_err_state = \"Error\": an AccessDenied is a real failure, not a benign not-yet-granted state as it was for appointment."
+  type        = bool
+  default     = true
+}

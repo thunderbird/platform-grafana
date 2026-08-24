@@ -778,7 +778,10 @@ resource "grafana_rule_group" "send_edge_public_alb_cert_expiry" {
 # distribution and publishes DaysToExpiry today (verified read-only), so NoData means the
 # pinned ARN went stale, not "healthy and idle".
 resource "grafana_rule_group" "send_edge_viewer_cert_expiry" {
-  count = var.send_distribution_id == "" ? 0 : 1
+  # Gated on its own ARN pin, NOT on send_distribution_id: emptying the distribution pin is the
+  # documented escape hatch for a stale distribution, and it must not silently drop cert-expiry
+  # monitoring with it (review on https://github.com/thunderbird/platform-grafana/pull/41).
+  count = var.send_viewer_cert_arn == "" ? 0 : 1
 
   name               = "send-edge-viewer-cert-expiry"
   folder_uid         = grafana_folder.send.uid
@@ -816,7 +819,7 @@ resource "grafana_rule_group" "send_edge_viewer_cert_expiry" {
         region           = "us-east-1"
         namespace        = "AWS/CertificateManager"
         metricName       = "DaysToExpiry"
-        dimensions       = { CertificateArn = "arn:aws:acm:us-east-1:718959508124:certificate/a8e5927e-a6fe-4a8b-8dac-8d72e579d05c" }
+        dimensions       = { CertificateArn = var.send_viewer_cert_arn }
         statistic        = "Minimum"
         period           = "86400"
         metricQueryType  = 0

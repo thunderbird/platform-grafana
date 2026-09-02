@@ -164,3 +164,17 @@ resource "grafana_dashboard" "send_cloudfront_edge" {
     send_health_check_id  = var.send_health_check_id
   })
 }
+
+# Legacy Services dashboards
+#
+# Accounts is the first tenant of this folder; see the header comment on
+# grafana_folder.legacy_services in folders.tf. This dashboard queries VictoriaMetrics
+# via the same pre-existing, unmanaged datasource UID used elsewhere in this repo
+# (P4169E866C3094E38), so it follows the discourse/kubernetes/victoriametrics precedent
+# of file() rather than the appointment/send templatefile() pattern (there is nothing here
+# that needs Terraform-side templating). The source JSON shipped with zero datasource
+# keys; they were injected into every panel and target when this file was copied in.
+resource "grafana_dashboard" "accounts_celery_flower" {
+  folder      = grafana_folder.legacy_services.id
+  config_json = file("${path.module}/dashboards/legacy-services/accounts-celery-flower.json")
+}

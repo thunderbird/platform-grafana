@@ -1,0 +1,1616 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Appointment application overview for tb-dev: backend/frontend/worker pods, Rollout and prePromotionAnalysis state, origin ALB, CloudFront, Celery worker health, migration Job outcome and namespace logs.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Issue #43 \u2014 Appointment stage dashboard",
+      "tooltip": "",
+      "type": "link",
+      "url": "https://github.com/thunderbird/platform-grafana/issues/43"
+    }
+  ],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "### Appointment \u2014 tb-dev application overview\n\nBackend and frontend run as Argo Rollouts blue-green Rollouts in the `appointment` namespace (platform-infrastructure#781). Four things here need a second look before you trust what they show:\n\n- **Worker and Migration Job panels** \u2014 the Celery worker and the DB migration Job do not exist on tb-dev yet ([appointment-deploy#19](https://github.com/thunderbird/appointment-deploy/issues/19), [#20](https://github.com/thunderbird/appointment-deploy/issues/20)). Pod/Job name patterns below are best-guess, matching the existing `appointment-backend`/`appointment-frontend` convention, and may need adjusting once those manifests land.\n- **Rollout Phase and prePromotionAnalysis Result** \u2014 `rollout_info` and `analysis_run_info` are the right metrics, but the tb-dev argo-rollouts Helm release has `controller.metrics.enabled: false` and no ServiceMonitor, so neither is scraped yet. Both panels will start working once that's enabled in platform-infrastructure.\n- **Celery Worker Health** \u2014 the backend has no Prometheus client or task-metrics exporter at all, so this shows pod-level health only, never task throughput or failures.\n- **Origin ALB pickers** \u2014 the LoadBalancer and Target Group dropdowns below list every ALB and target group in the tb-dev eu-central-1 account, not just Appointment's, because no ARN is known to filter by. There is no default selection: confirm you've picked the appointment origin ALB before reading Target Health or 5xx Count.\n\n**Current Rollout revision** has no Prometheus equivalent by design (argo-rollouts never exposes it as a metric) \u2014 use the Rollouts link panel below, which is the live source for revision and blue-green step detail.",
+        "mode": "markdown"
+      },
+      "title": "Prerequisites and how to read this dashboard",
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 2,
+      "panels": [],
+      "title": "Rollouts",
+      "type": "row"
+    },
+    {
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 7
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "Prometheus has no revision metric for Argo Rollouts \u2014 it is only ever a Kubernetes annotation. Use the live, read-only Rollouts dashboard for current revision, blue-green step state and full AnalysisRun detail:\n\n[appointment-backend](https://rollouts-tb-dev.pi.thunderbird.net/rollout/appointment/appointment-backend)  \u00b7  [appointment-frontend](https://rollouts-tb-dev.pi.thunderbird.net/rollout/appointment/appointment-frontend)",
+        "mode": "markdown"
+      },
+      "title": "Rollout revision and analysis detail",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 7
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "rollout_info{namespace=\"appointment\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "namespace": true
+            },
+            "renameByName": {
+              "name": "Rollout",
+              "strategy": "Strategy",
+              "phase": "Phase",
+              "traffic_router": "Traffic Router"
+            }
+          }
+        }
+      ],
+      "title": "Rollout Phase",
+      "type": "table",
+      "description": "Empty until controller.metrics + a ServiceMonitor are enabled for argo-rollouts on tb-dev (not done yet)."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 7
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "analysis_run_info{namespace=\"appointment\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "namespace": true
+            },
+            "renameByName": {
+              "name": "AnalysisRun",
+              "phase": "Phase"
+            }
+          }
+        }
+      ],
+      "title": "prePromotionAnalysis Result",
+      "type": "table",
+      "description": "Empty until controller.metrics + a ServiceMonitor are enabled for argo-rollouts on tb-dev (not done yet)."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 6,
+      "panels": [],
+      "title": "Pods",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{namespace=\"appointment\",condition=\"true\",pod=~\"appointment-backend-.*\"} == 1)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Backend Pods Ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{namespace=\"appointment\",condition=\"true\",pod=~\"appointment-frontend-.*\"} == 1)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Frontend Pods Ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{namespace=\"appointment\",condition=\"true\",pod=~\"appointment-worker-.*\"} == 1)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker Pods Ready",
+      "type": "stat",
+      "description": "Expected empty: the Celery worker does not exist on tb-dev yet (appointment-deploy#19)."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (pod, phase) (kube_pod_status_phase{namespace=\"appointment\"})",
+          "legendFormat": "{{pod}} - {{phase}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Pod Status by Phase",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (pod, container) (kube_pod_container_status_restarts_total{namespace=\"appointment\"})",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "pod": "Pod",
+              "container": "Container",
+              "Value": "Restarts"
+            }
+          }
+        }
+      ],
+      "title": "Container Restarts",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 12,
+      "panels": [],
+      "title": "Origin ALB (verify LoadBalancer selection)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$loadbalancer",
+            "TargetGroup": "$targetgroup"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "Healthy",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HealthyHostCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$loadbalancer",
+            "TargetGroup": "$targetgroup"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "Unhealthy",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "UnHealthyHostCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "eu-central-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "Target Health",
+      "type": "timeseries",
+      "description": "The LoadBalancer/TargetGroup pickers above list the whole tb-dev account with no default. Confirm you've selected the appointment origin ALB before trusting this panel."
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$loadbalancer",
+            "TargetGroup": "$targetgroup"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_Target_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "5xx Count",
+      "type": "timeseries",
+      "description": "Raw count per period, not a rate. Same LoadBalancer/TargetGroup caveat as Target Health applies."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 15,
+      "panels": [],
+      "title": "CloudFront",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 38
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "Requests",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Requests",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "4xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "4xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "4xx / 5xx Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "id": 18,
+      "panels": [],
+      "title": "Celery Worker Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 47
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"appointment\",pod=~\"appointment-worker-.*\",container!=\"\",container!=\"POD\"}[5m]))",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker CPU Usage (cores)",
+      "type": "timeseries",
+      "description": "Expected empty: the Celery worker does not exist on tb-dev yet (appointment-deploy#19)."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 47
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"appointment\",pod=~\"appointment-worker-.*\",container!=\"\",container!=\"POD\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker Memory Usage (working set, bytes)",
+      "type": "timeseries",
+      "description": "Expected empty: the Celery worker does not exist on tb-dev yet (appointment-deploy#19)."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "id": 21,
+      "panels": [],
+      "title": "Migration Job",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 56
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum(kube_job_status_succeeded{namespace=\"appointment\",job_name=~\"appointment-migrat.*\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Last Migration Succeeded",
+      "type": "stat",
+      "description": "Expected empty: the migration Job does not exist on tb-dev yet (appointment-deploy#20). job_name pattern is provisional."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 56
+      },
+      "id": 23,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum(kube_job_status_failed{namespace=\"appointment\",job_name=~\"appointment-migrat.*\"})",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Last Migration Failed",
+      "type": "stat",
+      "description": "Expected empty: the migration Job does not exist on tb-dev yet (appointment-deploy#20). job_name pattern is provisional."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 24,
+      "panels": [],
+      "title": "Logs \u2014 appointment namespace",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "id": 25,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "expr": "_stream:{namespace=\"appointment\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "appointment namespace logs",
+      "type": "logs"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "appointment",
+    "tb-dev"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "${appointment_distribution_id}",
+          "value": "${appointment_distribution_id}"
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${cloudwatch_tb_dev_uid}"
+        },
+        "definition": "dimension_values(us-east-1,AWS/CloudFront,Requests,DistributionId)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Distribution",
+        "multi": false,
+        "name": "distribution_id",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {},
+          "dimensionKey": "DistributionId",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "Requests",
+          "namespace": "AWS/CloudFront",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "us-east-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "${appointment_distribution_id}",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${cloudwatch_tb_dev_uid}"
+        },
+        "definition": "dimension_values(eu-central-1,AWS/ApplicationELB,RequestCount,LoadBalancer)",
+        "description": "Lists every ALB in the tb-dev eu-central-1 account, not just Appointment's -- no ARN was available to filter by. Verify you've selected the appointment origin ALB before trusting Target Health or 5xx Count.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Load Balancer",
+        "multi": false,
+        "name": "loadbalancer",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {},
+          "dimensionKey": "LoadBalancer",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "RequestCount",
+          "namespace": "AWS/ApplicationELB",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "eu-central-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${cloudwatch_tb_dev_uid}"
+        },
+        "definition": "dimension_values(eu-central-1,AWS/ApplicationELB,HealthyHostCount,TargetGroup,{\"LoadBalancer\":\"$loadbalancer\"})",
+        "description": "Target groups for the selected Load Balancer above. Same caveat: nothing here is scoped to Appointment specifically.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Target Group",
+        "multi": false,
+        "name": "targetgroup",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {
+            "LoadBalancer": "$loadbalancer"
+          },
+          "dimensionKey": "TargetGroup",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "HealthyHostCount",
+          "namespace": "AWS/ApplicationELB",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "eu-central-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Appointment \u2014 Application Overview (tb-dev)",
+  "uid": "appointment-application-overview",
+  "version": 1
+}

@@ -164,3 +164,11 @@ resource "grafana_dashboard" "send_cloudfront_edge" {
     send_health_check_id  = var.send_health_check_id
   })
 }
+
+resource "grafana_dashboard" "appointment_application_overview" {
+  folder = grafana_folder.appointment.id
+  config_json = templatefile("${path.module}/dashboards/appointment/application-overview.json.tftpl", {
+    cloudwatch_tb_dev_uid       = grafana_data_source.cloudwatch_tb_dev.uid
+    appointment_distribution_id = var.appointment_distribution_id
+  })
+}

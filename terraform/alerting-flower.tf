@@ -1,40 +1,15 @@
-# Celery/Flower monitoring alerts for accounts (thunderbird/platform-infrastructure#1093).
+# Celery/Flower monitoring alerts for accounts (thunderbird/platform-infrastructure#1093),
+# in the same grafana_folder.legacy_services folder as the dashboard (#1092). Routing
+# uses the existing root policy in alerting.tf, unchanged: severity=critical pages,
+# severity=warning goes to Slack via the low-urgency route. No new contact points or
+# policy changes.
 #
-# vmalert on mzla-eks-workloads01 is notifier.blackhole -- it evaluates rules but
-# delivers nowhere. Grafana is the only alerting path on this platform wired to
-# PagerDuty, so these six rules live here rather than as VMRule CRDs, in the same
-# grafana_folder.legacy_services folder as the Celery/Flower dashboard (#1092).
-# Routing is the existing root policy in alerting.tf, unchanged: severity=critical
-# matches the "page|critical" route -> pagerduty-platform-infra -> phone page;
-# severity=warning matches the low-urgency route -> Slack #mzla-pages. No new
-# contact points or policy changes.
-#
-# A/B/C pattern copied from alerting-converted-vmrules.tf: A runs the full instant
-# PromQL expr against local.victoriametrics_ds_uid, B reduces it to its last value,
-# C thresholds on `> 0` (the expr produced a matching series with a positive value).
-#
-# That pattern requires each A expr to evaluate to a POSITIVE number when firing and
-# either 0 or empty otherwise -- a plain `metric == 0` filter does not do this: PromQL
-# comparison operators without `bool` return the matched series UNCHANGED, so
-# `up{...} == 0` firing still evaluates to literal 0, and 0 > 0 is false. Rules 1-3
-# below use `== bool 0` (rule 5 uses `< bool 15`) so the comparison is coerced to a
-# real 1/0 series instead of a value-preserving filter, matching the intent described
-# in issue #1093. Rules 4 and 6 don't need this: their raw comparisons already keep a
-# genuinely positive value (a staleness duration in seconds, a failure count) when
-# they fire, so the untouched `> N` / `> 0` in the expr behaves correctly as-is.
-#
-# no_data_state per rule:
-#   - Rules 1/2 (up == bool 0): the `up` series exists for as long as vmagent/VM has
-#     the target configured, healthy or not, so NoData means the scrape config itself
-#     is gone -- Alerting.
-#   - Rules 3/4/5: NoData here means the exporter or its scrape is gone entirely,
-#     which rules 1/2 already page on -- OK avoids a duplicate page for the same root
-#     cause.
-#   - Rule 6: increase() over a filtered counter selector legitimately returns empty
-#     when zero critical failures occurred in the window, which is the normal state --
-#     MUST be OK or this pages continuously.
-# exec_err_state = "Error" on every rule (a real query failure is never expected
-# behavior and should always surface).
+# Two PromQL quirks these rules rely on:
+#   - A comparison without `bool` filters the series but keeps its original value, so
+#     a firing `metric == 0` still evaluates to literal 0 (not true), and a `> 0`
+#     threshold never trips; `== bool` / `< bool` coerce it to a real 1/0 instead.
+#   - Rule 6's increase() over a filtered counter is empty in the normal, no-failures
+#     case, so its no_data_state must be OK or it pages continuously.
 
 resource "grafana_rule_group" "accounts_celery_flower" {
   name               = "accounts-celery-flower"
@@ -42,7 +17,6 @@ resource "grafana_rule_group" "accounts_celery_flower" {
   interval_seconds   = 60
   disable_provenance = true
 
-  # --- Flower native /metrics not scraped ---
   rule {
     name           = "FlowerNativeMetricsScrapeDown"
     condition      = "C"
@@ -116,7 +90,6 @@ resource "grafana_rule_group" "accounts_celery_flower" {
     }
   }
 
-  # --- Flower exporter pod not scraped ---
   rule {
     name           = "FlowerExporterTargetDown"
     condition      = "C"
@@ -190,7 +163,6 @@ resource "grafana_rule_group" "accounts_celery_flower" {
     }
   }
 
-  # --- Exporter up but its polls of Flower's REST API are failing ---
   rule {
     name           = "FlowerExporterUpstreamFetchFailing"
     condition      = "C"
@@ -264,7 +236,6 @@ resource "grafana_rule_group" "accounts_celery_flower" {
     }
   }
 
-  # --- Exporter scrape loop stalled ---
   rule {
     name           = "FlowerExporterScrapeStale"
     condition      = "C"
@@ -338,7 +309,6 @@ resource "grafana_rule_group" "accounts_celery_flower" {
     }
   }
 
-  # --- Reported worker count below baseline ---
   rule {
     name           = "FlowerWorkerCountLow"
     condition      = "C"
@@ -357,15 +327,8 @@ resource "grafana_rule_group" "accounts_celery_flower" {
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/1093"
     }
 
-    # `< bool 15` (not a plain `< 15` filter) so a total outage -- worker count at
-    # exactly 0 -- still evaluates to a real 1, not the value-preserving 0 a bare
-    # filter would keep; see the file header for why this matters for the C threshold.
-    # `or vector(0)` guards a second, worse gap: if NO workers are registered at all,
-    # flower_worker_online has zero series, so sum() over it is itself empty -- not
-    # 0 -- and `< bool 15` on an empty input is still empty. That would go to NoData,
-    # which this rule maps to OK (see the file header), leaving total worker loss
-    # silent. `or vector(0)` substitutes a literal 0 whenever the sum side is empty,
-    # so the `< bool 15` always has a real input to evaluate.
+    # `or vector(0)`: with zero workers registered, sum() has no input and is empty
+    # (not 0), so this substitutes a literal 0 to keep `< bool 15` evaluable.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
@@ -421,7 +384,6 @@ resource "grafana_rule_group" "accounts_celery_flower" {
     }
   }
 
-  # --- Critical-classified task failure ---
   rule {
     name           = "FlowerCriticalTaskFailure"
     condition      = "C"
@@ -440,10 +402,8 @@ resource "grafana_rule_group" "accounts_celery_flower" {
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/1093"
     }
 
-    # The severity="critical" selector inside this PromQL expr is the exporter's own
-    # task-classification label (from exporter/severity.yml), unrelated to the
-    # Grafana `labels.severity = "critical"` above that drives PagerDuty routing --
-    # same name, two different label namespaces.
+    # severity="critical" in this expr is the exporter's own task-classification
+    # label (exporter/severity.yml), not the Grafana routing label above.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid

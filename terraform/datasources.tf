@@ -61,7 +61,7 @@ resource "grafana_data_source" "cloudwatch_tb_prod" {
   })
 }
 
-# Cross-account CloudWatch — thunderbird-legacy (768512802988) — added for
+# Cross-account CloudWatch - thunderbird-legacy (768512802988) - added for
 # thunderbird/addons-server#394. This account holds live AMO production (amo-prod,
 # amo-prod-versioncheck ALBs; the atn-web-stream9 EC2 fleet; the versioncheck/services
 # CloudFront distributions), NOT just old leftovers despite the account name.
@@ -107,7 +107,7 @@ resource "grafana_data_source" "cloudwatch_tb_prod" {
 # Once created, flip amo_metrics_iam_granted to true in the same follow-up PR.
 resource "grafana_data_source" "cloudwatch_tb_legacy" {
   type = "cloudwatch"
-  name = "CloudWatch — tb-legacy (AMO prod)"
+  name = "CloudWatch: tb-legacy (AMO prod)"
 
   json_data_encoded = jsonencode({
     defaultRegion = "us-west-2"

@@ -360,6 +360,12 @@ resource "grafana_rule_group" "accounts_celery_flower" {
     # `< bool 15` (not a plain `< 15` filter) so a total outage -- worker count at
     # exactly 0 -- still evaluates to a real 1, not the value-preserving 0 a bare
     # filter would keep; see the file header for why this matters for the C threshold.
+    # `or vector(0)` guards a second, worse gap: if NO workers are registered at all,
+    # flower_worker_online has zero series, so sum() over it is itself empty -- not
+    # 0 -- and `< bool 15` on an empty input is still empty. That would go to NoData,
+    # which this rule maps to OK (see the file header), leaving total worker loss
+    # silent. `or vector(0)` substitutes a literal 0 whenever the sum side is empty,
+    # so the `< bool 15` always has a real input to evaluate.
     data {
       ref_id         = "A"
       datasource_uid = local.victoriametrics_ds_uid
@@ -370,7 +376,7 @@ resource "grafana_rule_group" "accounts_celery_flower" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = local.victoriametrics_ds_uid }
-        expr          = "sum(flower_worker_online{job=\"flower-native\"}) < bool 15"
+        expr          = "(sum(flower_worker_online{job=\"flower-native\"}) or vector(0)) < bool 15"
         instant       = true
         range         = false
         intervalMs    = 1000

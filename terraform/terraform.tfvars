@@ -34,3 +34,10 @@ send_health_check_id     = "da628e81-e6ef-41fc-baa1-e48009de8682"
 send_viewer_cert_arn     = "arn:aws:acm:us-east-1:718959508124:certificate/a8e5927e-a6fe-4a8b-8dac-8d72e579d05c"
 send_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/8d6677fc-723e-4f6b-a17f-c9334fa31371"
 send_metrics_iam_granted = true
+
+# AMO production edge (thunderbird/addons-server#394). false until the
+# mzla-tb-legacy-grafana-cloudwatch role is created in 768512802988 -- see the IAM diff
+# on grafana_data_source.cloudwatch_tb_legacy in datasources.tf, posted in the issue for
+# Matthew's go. Until then every query in alerting-amo-edge.tf gets AccessDenied, read as
+# exec_err_state = "OK" rather than paging Slack every interval.
+amo_metrics_iam_granted = false

@@ -80,3 +80,10 @@ variable "send_metrics_iam_granted" {
   type        = bool
   default     = false
 }
+
+# --- AMO production edge (thunderbird/addons-server#394) ------------------------
+variable "amo_metrics_iam_granted" {
+  description = "Whether the cross-account role mzla-tb-legacy-grafana-cloudwatch (768512802988) exists and grants cloudwatch:GetMetricData/ListMetrics. That role does not exist yet -- see the comment on grafana_data_source.cloudwatch_tb_legacy in datasources.tf for the exact IAM to create, posted in thunderbird/addons-server#394 for Matthew's go. While false, alerting-amo-edge.tf reads every AccessDenied as exec_err_state = \"OK\" instead of notifying Slack every interval. Flip to true in the follow-up PR once the role is created."
+  type        = bool
+  default     = false
+}

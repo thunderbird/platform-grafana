@@ -45,3 +45,7 @@ resource "grafana_folder" "appointment" {
 resource "grafana_folder" "send" {
   title = "Send"
 }
+
+resource "grafana_folder" "amo" {
+  title = "AMO"
+}

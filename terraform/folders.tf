@@ -49,3 +49,11 @@ resource "grafana_folder" "send" {
 resource "grafana_folder" "amo" {
   title = "AMO"
 }
+
+# Scoped to services still on the legacy (pre-Kubernetes) deployment stack, as distinct
+# from the folders above that belong to the new stack. Accounts is the first tenant here;
+# send/thundermail/appointment can land their own Celery/Flower dashboards in this same
+# folder later if they ever get equivalent monitoring on this exporter instance.
+resource "grafana_folder" "legacy_services" {
+  title = "Legacy Services"
+}

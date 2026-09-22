@@ -1,0 +1,2651 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Appointment on tb-dev (mzla-eks-tb-dev01, namespace appointment) for the stage cutover: pods, Argo Rollouts, the Alembic migrate Job, the origin ALB, the CloudFront edge, Celery and logs, so engineers can tell an app problem from an edge problem.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Issue #43: Appointment stage dashboard",
+      "tooltip": "",
+      "type": "link",
+      "url": "https://github.com/thunderbird/platform-grafana/issues/43"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [
+        "appointment",
+        "edge"
+      ],
+      "targetBlank": false,
+      "title": "Appointment dashboards",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "Pods",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Ready pods, from kube_pod_status_ready (kube-state-metrics on tb-dev) filtered on the pod name prefix. Pods of a Rollout preview ReplicaSet count too while prePromotionAnalysis runs.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",condition=\"true\",pod=~\"appointment-backend-.*\"} == 1) or vector(0)",
+          "legendFormat": "ready",
+          "refId": "A"
+        }
+      ],
+      "title": "Backend ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Ready pods, from kube_pod_status_ready (kube-state-metrics on tb-dev) filtered on the pod name prefix. Pods of a Rollout preview ReplicaSet count too while prePromotionAnalysis runs.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",condition=\"true\",pod=~\"appointment-frontend-.*\"} == 1) or vector(0)",
+          "legendFormat": "ready",
+          "refId": "A"
+        }
+      ],
+      "title": "Frontend ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Celery worker pods (appointment-worker-*, HPA 1 to 10) plus the single beat pod. Empty until thunderbird/appointment-deploy#19 lands the worker Deployment.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",condition=\"true\",pod=~\"appointment-worker-.*\"} == 1) or vector(0)",
+          "legendFormat": "worker",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "count(kube_pod_status_ready{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",condition=\"true\",pod=~\"appointment-beat-.*\"} == 1) or vector(0)",
+          "legendFormat": "beat",
+          "refId": "B"
+        }
+      ],
+      "title": "Worker ready",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Container restarts across the namespace in the last hour.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum(increase(kube_pod_container_status_restarts_total{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\"}[1h])) or vector(0)",
+          "legendFormat": "restarts",
+          "refId": "A"
+        }
+      ],
+      "title": "Restarts (1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "kube_pod_status_phase summed per phase for the appointment namespace.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (phase) (kube_pod_status_phase{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\"})",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Pod phase",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Restart rate per container, 15m window. A step up on backend during a rollout means the new revision is crash looping behind the preview Service.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (pod, container) (rate(kube_pod_container_status_restarts_total{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\"}[15m]))",
+          "legendFormat": "{{pod}}/{{container}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Container restarts",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Pods whose Ready condition is false, per pod. Anything non-zero for more than a few minutes after a sync is a stuck revision.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "sum by (pod) (kube_pod_status_ready{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",condition=\"false\"}) > 0",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Not ready pods",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 9,
+      "panels": [],
+      "title": "Rollouts (Argo Rollouts blue-green)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Phase label of rollout_info for the Rollout. Healthy is the steady state; Paused means a blue-green revision is waiting on prePromotionAnalysis; Degraded means the analysis failed and the active Service stayed on the old pods. Needs the Argo Rollouts controller metrics: turn on controller.metrics.enabled and its ServiceMonitor in argocd/tb-dev/helm-values/argo-rollouts.yaml (platform-infrastructure). Empty until then.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 14
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max by (phase) (rollout_info{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=\"appointment-backend\"})",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Backend rollout phase",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Revision number of the newest prePromotionAnalysis AnalysisRun for this Rollout, parsed from its name (rollout-podhash-revision-pre). Argo Rollouts keeps only the last few AnalysisRuns, so this is the current revision as long as the Rollout has promoted at least once since the controller last garbage-collected.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 14
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max(label_value(label_replace(analysis_run_info{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=~\"appointment-backend-[a-z0-9]+-[0-9]+-pre\"}, \"revision\", \"$1\", \"name\", \".*-([0-9]+)-pre\"), \"revision\"))",
+          "legendFormat": "revision",
+          "refId": "A"
+        }
+      ],
+      "title": "Backend revision",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Phase label of rollout_info for the Rollout. Healthy is the steady state; Paused means a blue-green revision is waiting on prePromotionAnalysis; Degraded means the analysis failed and the active Service stayed on the old pods. Needs the Argo Rollouts controller metrics: turn on controller.metrics.enabled and its ServiceMonitor in argocd/tb-dev/helm-values/argo-rollouts.yaml (platform-infrastructure). Empty until then.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 14
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "name",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max by (phase) (rollout_info{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=\"appointment-frontend\"})",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Frontend rollout phase",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Revision number of the newest prePromotionAnalysis AnalysisRun for this Rollout, parsed from its name (rollout-podhash-revision-pre). Argo Rollouts keeps only the last few AnalysisRuns, so this is the current revision as long as the Rollout has promoted at least once since the controller last garbage-collected.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max(label_value(label_replace(analysis_run_info{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=~\"appointment-frontend-[a-z0-9]+-[0-9]+-pre\"}, \"revision\", \"$1\", \"name\", \".*-([0-9]+)-pre\"), \"revision\"))",
+          "legendFormat": "revision",
+          "refId": "A"
+        }
+      ],
+      "title": "Frontend revision",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "prePromotionAnalysis AnalysisRuns the controller still holds (Argo Rollouts keeps the last few per Rollout), newest revision first. The top row per Rollout is the result of its last analysis: Successful means the active Service flipped to the new pods; Failed or Error means the old pods kept serving and the Rollout is Degraded. Needs the Argo Rollouts controller metrics: turn on controller.metrics.enabled and its ServiceMonitor in argocd/tb-dev/helm-values/argo-rollouts.yaml (platform-infrastructure). Empty until then.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "Error": {
+                  "color": "red",
+                  "index": 2
+                },
+                "Failed": {
+                  "color": "red",
+                  "index": 1
+                },
+                "Inconclusive": {
+                  "color": "orange",
+                  "index": 4
+                },
+                "Running": {
+                  "color": "blue",
+                  "index": 3
+                },
+                "Successful": {
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 14,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "revision"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "label_value(label_replace(label_replace(analysis_run_info{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=~\"appointment-(backend|frontend)-[a-z0-9]+-[0-9]+-pre\"}, \"revision\", \"$1\", \"name\", \".*-([0-9]+)-pre\"), \"rollout\", \"$1\", \"name\", \"^(appointment-(backend|frontend))-.*\"), \"revision\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "prePromotionAnalysis runs (newest first)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "cluster": true,
+              "container": true,
+              "endpoint": true,
+              "instance": true,
+              "job": true,
+              "namespace": true,
+              "pod": true,
+              "prometheus": true,
+              "region": true,
+              "service": true
+            },
+            "indexByName": {
+              "Value": 1,
+              "name": 3,
+              "phase": 2,
+              "rollout": 0
+            },
+            "renameByName": {
+              "Value": "revision",
+              "name": "analysisrun"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Desired vs available vs updated replicas per Rollout. During a blue-green revision, updated rises to desired on the preview ReplicaSet before available follows on promotion.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "rollout_info_replicas_desired{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=~\"appointment-(backend|frontend)\"}",
+          "legendFormat": "{{name}} desired",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "rollout_info_replicas_available{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=~\"appointment-(backend|frontend)\"}",
+          "legendFormat": "{{name}} available",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "rollout_info_replicas_updated{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",name=~\"appointment-(backend|frontend)\"}",
+          "legendFormat": "{{name}} updated",
+          "refId": "C"
+        }
+      ],
+      "title": "Rollout replicas",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Migration Job (appointment-migrate)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "kube_job_status_succeeded for the Alembic Sync hook Job (thunderbird/appointment-deploy#23). BeforeHookCreation keeps the last Job until the next sync, so this shows the most recent run. Empty until that PR lands.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "text": "NO"
+                },
+                "1": {
+                  "color": "green",
+                  "text": "YES"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 27
+      },
+      "id": 17,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max(kube_job_status_succeeded{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",job_name=~\"appointment-migrate.*\"})",
+          "legendFormat": "succeeded",
+          "refId": "A"
+        }
+      ],
+      "title": "Migrate Job succeeded",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "kube_job_status_failed. Non-zero with succeeded NO means the sync is blocked at wave 0 and no Rollout started.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 27
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max(kube_job_status_failed{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",job_name=~\"appointment-migrate.*\"})",
+          "legendFormat": "failed",
+          "refId": "A"
+        }
+      ],
+      "title": "Migrate Job failed pods",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Pods currently running the migration. Should be 0 outside a sync.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 27
+      },
+      "id": 19,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max(kube_job_status_active{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",job_name=~\"appointment-migrate.*\"})",
+          "legendFormat": "active",
+          "refId": "A"
+        }
+      ],
+      "title": "Migrate Job active",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "kube_job_status_completion_time of the last Job.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "dateTimeFromNow"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 27
+      },
+      "id": 20,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "expr": "max(kube_job_status_completion_time{cluster=\"mzla-eks-tb-dev01\",namespace=\"appointment\",job_name=~\"appointment-migrate.*\"}) * 1000",
+          "legendFormat": "completed",
+          "refId": "A"
+        }
+      ],
+      "title": "Last migration completed",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "id": 21,
+      "panels": [],
+      "title": "Origin ALB (appointment-origin-tb-dev, eu-central-1)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "HealthyHostCount (Minimum over the period) on the origin ALB target group. The frontend Rollout has 2 replicas behind the active Service.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 32
+      },
+      "id": 22,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb",
+            "TargetGroup": "$origin_target_group"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "healthy",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HealthyHostCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Minimum"
+        }
+      ],
+      "title": "Healthy targets",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "UnHealthyHostCount (Maximum over the period) on the origin ALB target group.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 32
+      },
+      "id": 23,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb",
+            "TargetGroup": "$origin_target_group"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "unhealthy",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "UnHealthyHostCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Maximum"
+        }
+      ],
+      "title": "Unhealthy targets",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "Sum of HTTPCode_ELB_5XX_Count over the dashboard time range. ELB-generated 5xx means the load balancer had no healthy target or the target timed out; compare with Target 5xx below.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 32
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "elb 5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_ELB_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "ALB 5xx (range)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "Sum of HTTPCode_Target_5XX_Count over the dashboard time range: 5xx returned by the frontend nginx, including proxied /api/v1 backend errors.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 32
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "target 5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_Target_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Target 5xx (range)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "RequestCount with ELB and target 5xx counts per minute on the origin ALB.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "requests",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "RequestCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "elb 5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_ELB_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "target 5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_Target_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "C",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Origin ALB requests and 5xx",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "(ELB 5xx + target 5xx) / requests as a percentage, per minute. FILL treats a minute with no 5xx datapoint as 0 so the line does not break.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "req",
+          "legendFormat": "requests",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "RequestCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "elb5xx",
+          "legendFormat": "elb 5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_ELB_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "expression": "",
+          "hide": true,
+          "id": "tgt5xx",
+          "legendFormat": "target 5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_Target_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "C",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {},
+          "expression": "100 * (FILL(elb5xx, 0) + FILL(tgt5xx, 0)) / req",
+          "id": "",
+          "legendFormat": "5xx rate",
+          "matchExact": true,
+          "metricEditorMode": 1,
+          "metricName": "",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "60",
+          "queryMode": "Metrics",
+          "refId": "D",
+          "region": "eu-central-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "Origin ALB 5xx rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 28,
+      "panels": [],
+      "title": "CloudFront edge (us-east-1)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "Viewer requests on the distribution (Sum per 5 minutes). The full edge view, including cache hit rate and origin latency, is the Appointment CloudFront Edge dashboard in this folder.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 45
+      },
+      "id": 29,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "requests",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Requests",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "CloudFront requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "4xx, 5xx and total error rate as a percentage of viewer requests. A 5xx here with a quiet origin ALB points at the edge or the origin TLS path, not the app.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 45
+      },
+      "id": 30,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "4xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "4xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "5xx",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "total",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TotalErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "C",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "CloudFront error rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_dev_uid}"
+      },
+      "description": "OriginLatency p50 and p99 in milliseconds (needs the MonitoringSubscription, live since platform-infrastructure #826). Rising latency with a healthy ALB means the backend is slow, not down.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 45
+      },
+      "id": 31,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p50",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "OriginLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "p50"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_dev_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "$distribution_id",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p99",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "OriginLatency",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "p99"
+        }
+      ],
+      "title": "CloudFront origin latency",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "id": 32,
+      "panels": [],
+      "title": "Celery worker (from worker logs in VictoriaLogs)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${victorialogs_uid}"
+      },
+      "description": "Tasks the worker reported succeeded, failed (raised) or retried, per minute. There is no Celery metrics exporter on tb-dev (Flower is out of scope in thunderbird/appointment-deploy#19), so these panels count Celery's own INFO log lines that Vector ships.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-worker-\"* AND \"succeeded in\" | stats count() succeeded",
+          "queryType": "statsRange",
+          "refId": "A",
+          "step": "1m"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-worker-\"* AND \"] raised\" | stats count() failed",
+          "queryType": "statsRange",
+          "refId": "B",
+          "step": "1m"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-worker-\"* AND \"] retry:\" | stats count() retried",
+          "queryType": "statsRange",
+          "refId": "C",
+          "step": "1m"
+        }
+      ],
+      "title": "Celery tasks per minute",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${victorialogs_uid}"
+      },
+      "description": "Worker log lines with a task exception in the dashboard time range. There is no Celery metrics exporter on tb-dev (Flower is out of scope in thunderbird/appointment-deploy#19), so these panels count Celery's own INFO log lines that Vector ships.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 54
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-worker-\"* AND \"] raised\" | stats count() failed",
+          "queryType": "stats",
+          "refId": "A"
+        }
+      ],
+      "title": "Celery failures (range)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${victorialogs_uid}"
+      },
+      "description": "Tasks the worker received in the dashboard time range; compare with succeeded to spot a backlog. There is no Celery metrics exporter on tb-dev (Flower is out of scope in thunderbird/appointment-deploy#19), so these panels count Celery's own INFO log lines that Vector ships.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 54
+      },
+      "id": 35,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-worker-\"* AND \"] received\" | stats count() received",
+          "queryType": "stats",
+          "refId": "A"
+        }
+      ],
+      "title": "Celery tasks received (range)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${victorialogs_uid}"
+      },
+      "description": "Most recent worker log lines that mention a task failure.",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 58
+      },
+      "id": 36,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-worker-\"* AND (\"] raised\" OR level:error)",
+          "maxLines": 200,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker errors",
+      "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 37,
+      "panels": [],
+      "title": "Logs (namespace appointment)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${victorialogs_uid}"
+      },
+      "description": "Lines per minute per level for the selected components. Vector sets the level field from JSON logs or a keyword match.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "id": 38,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-$component\"* | stats by (level) count() lines",
+          "legendFormat": "{{level}}",
+          "queryType": "statsRange",
+          "refId": "A",
+          "step": "1m"
+        }
+      ],
+      "title": "Log volume by level",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${victorialogs_uid}"
+      },
+      "description": "Pod logs for the appointment namespace on tb-dev, filtered by the Component picker (All matches every appointment-* pod, including migrate Job pods).",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 69
+      },
+      "id": 39,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${victorialogs_uid}"
+          },
+          "expr": "cluster:\"mzla-eks-tb-dev01\" AND namespace:\"appointment\" AND pod:\"appointment-$component\"*",
+          "maxLines": 1000,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Logs",
+      "type": "logs"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "appointment",
+    "tb-dev",
+    "stage"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Component",
+        "multi": false,
+        "name": "component",
+        "options": [],
+        "query": "backend,frontend,worker,beat,migrate",
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${cloudwatch_tb_dev_uid}"
+        },
+        "definition": "dimension_values(eu-central-1,AWS/ApplicationELB,RequestCount,LoadBalancer)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Origin ALB",
+        "multi": false,
+        "name": "origin_alb",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {},
+          "dimensionKey": "LoadBalancer",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "RequestCount",
+          "namespace": "AWS/ApplicationELB",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "eu-central-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "/^app\\/appointment-origin-tb-dev\\//",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${cloudwatch_tb_dev_uid}"
+        },
+        "definition": "dimension_values(eu-central-1,AWS/ApplicationELB,HealthyHostCount,TargetGroup,{\"LoadBalancer\":\"$origin_alb\"})",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Origin target group",
+        "multi": false,
+        "name": "origin_target_group",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {
+            "LoadBalancer": "$origin_alb"
+          },
+          "dimensionKey": "TargetGroup",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "HealthyHostCount",
+          "namespace": "AWS/ApplicationELB",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "eu-central-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "${appointment_distribution_id}",
+          "value": "${appointment_distribution_id}"
+        },
+        "datasource": {
+          "type": "cloudwatch",
+          "uid": "${cloudwatch_tb_dev_uid}"
+        },
+        "definition": "dimension_values(us-east-1,AWS/CloudFront,Requests,DistributionId)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Distribution",
+        "multi": false,
+        "name": "distribution_id",
+        "options": [],
+        "query": {
+          "attributeName": "",
+          "dimensionFilters": {},
+          "dimensionKey": "DistributionId",
+          "ec2Filters": {},
+          "instanceID": "",
+          "metricName": "Requests",
+          "namespace": "AWS/CloudFront",
+          "queryType": "dimensionValues",
+          "refId": "CloudWatchVariableQueryEditor-VariableQuery",
+          "region": "us-east-1",
+          "resourceType": "",
+          "tags": {}
+        },
+        "refresh": 1,
+        "regex": "${appointment_distribution_id}",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Appointment - Stage (tb-dev)",
+  "uid": "appointment-stage",
+  "version": 1
+}

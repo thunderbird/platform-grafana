@@ -115,3 +115,8 @@ resource "grafana_data_source" "cloudwatch_tb_legacy" {
     assumeRoleArn = "arn:aws:iam::768512802988:role/mzla-tb-legacy-grafana-cloudwatch"
   })
 }
+
+# Provisioned by the Grafana Helm chart in platform-infrastructure with a server-assigned UID, so look it up by name.
+data "grafana_data_source" "victorialogs" {
+  name = "VictoriaLogs"
+}

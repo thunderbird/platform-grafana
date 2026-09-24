@@ -149,6 +149,16 @@ resource "grafana_dashboard" "appointment_cloudfront_edge" {
   })
 }
 
+# Stage cutover view for #43. The CloudWatch and VictoriaLogs UIDs are server-assigned, hence templatefile().
+resource "grafana_dashboard" "appointment_stage" {
+  folder = grafana_folder.appointment.id
+  config_json = templatefile("${path.module}/dashboards/appointment/appointment-stage.json.tftpl", {
+    cloudwatch_tb_dev_uid       = grafana_data_source.cloudwatch_tb_dev.uid
+    victorialogs_uid            = data.grafana_data_source.victorialogs.uid
+    appointment_distribution_id = var.appointment_distribution_id
+  })
+}
+
 # Send dashboards
 #
 # Same shape as the appointment dashboard above (see its header for why the datasource

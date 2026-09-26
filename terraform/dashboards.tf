@@ -178,3 +178,19 @@ resource "grafana_dashboard" "accounts_celery_flower" {
   folder      = grafana_folder.legacy_services.id
   config_json = file("${path.module}/dashboards/legacy-services/accounts-celery-flower.json")
 }
+
+# AMO dashboards (thunderbird/addons-server#405)
+#
+# Same templatefile() shape as the appointment/send dashboards above: cloudwatch_tb_legacy
+# does not set uid, so it is server-assigned and must be templated in, not hardcoded.
+# Every ALB/EC2/CloudFront id below is pinned directly in the dashboard JSON rather than
+# passed as a variable, unlike appointment/send's distribution-id pattern -- unlike those,
+# nothing here is pending Pulumi work that could change an id, so there is no "escape
+# hatch" for a variable layer to provide. See alerting-amo-edge.tf for the same choice on
+# the alert-rule side.
+resource "grafana_dashboard" "amo_overview" {
+  folder = grafana_folder.amo.id
+  config_json = templatefile("${path.module}/dashboards/amo/overview.json.tftpl", {
+    cloudwatch_tb_legacy_uid = grafana_data_source.cloudwatch_tb_legacy.uid
+  })
+}

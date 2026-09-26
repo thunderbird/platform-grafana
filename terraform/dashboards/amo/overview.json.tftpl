@@ -1,0 +1,1300 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "AMO production overview: amo-prod and amo-prod-versioncheck ALBs, the six atn-web-stream9 instances, and the versioncheck/services CloudFront edges, all in thunderbird-legacy (768512802988).",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Issue #405 - AMO overview dashboard",
+      "tooltip": "",
+      "type": "link",
+      "url": "https://github.com/thunderbird/addons-server/issues/405"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Issue #394 - alert rules for these same metrics",
+      "tooltip": "",
+      "type": "link",
+      "url": "https://github.com/thunderbird/addons-server/issues/394"
+    }
+  ],
+  "panels": [
+    {
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "### AMO production overview (account 768512802988)\n\nAll panels here read from the `CloudWatch: tb-legacy (AMO prod)` datasource, which assumes the cross-account role `mzla-tb-legacy-grafana-cloudwatch`. **That role does not exist yet** (platform-grafana#45 / addons-server#394) -- until it is created every panel below will show \"no data\" or a datasource error, not because traffic is absent but because the grant is missing.\n\n`amo-prod` and `amo-prod-versioncheck` are both busy production ALBs (hundreds of thousands of requests/hour each); an empty panel once the role exists means something is wrong, not that traffic is quiet.\n\n**Cache Hit Rate** for the two CloudFront distributions will read empty even once the role exists: neither `E1PQMC7BGJOP5E` (versioncheck) nor `EGX44RIFURRUW` (services) has a CloudFront `MonitoringSubscription` enabled (verified read-only, `NoSuchMonitoringSubscription`), and that metric only publishes when one is. Enabling it is an AWS change in the legacy account and is out of scope for this dashboard.",
+        "mode": "markdown"
+      },
+      "title": "How to read this dashboard",
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 2,
+      "panels": [],
+      "title": "amo-prod ALB",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Total requests received by the amo-prod ALB. CloudWatch publishes only Sum for this metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod/c089cbd004f1c9c0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "RequestCount",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "RequestCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "amo-prod Request Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Target response time, p50 and p95. Alerted on p50 > 1s for 15m in terraform/alerting-amo-edge.tf (baseline observed ~35-42ms).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod/c089cbd004f1c9c0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p50",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TargetResponseTime",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "p50"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod/c089cbd004f1c9c0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p95",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TargetResponseTime",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-west-2",
+          "statistic": "p95"
+        }
+      ],
+      "title": "amo-prod Target Response Time (p50 / p95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "ELB-generated 5xx (the load balancer itself failing, e.g. no healthy target) vs target-generated 5xx (the backend returning a 5xx, passed through). A self-computed 502 rate (a subset of ELB 5xx) is alerted on at > 1% for 15m in terraform/alerting-amo-edge.tf.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod/c089cbd004f1c9c0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "HTTPCode_ELB_5XX_Count",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_ELB_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod/c089cbd004f1c9c0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "HTTPCode_Target_5XX_Count",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_Target_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-west-2",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "amo-prod 5xx (ELB vs Target)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Healthy targets in the amo-prod target group (targetgroup/amo-prod/f5afe4b907ffb76d).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "TargetGroup": "targetgroup/amo-prod/f5afe4b907ffb76d",
+            "LoadBalancer": "app/amo-prod/c089cbd004f1c9c0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "HealthyHostCount",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HealthyHostCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Average"
+        }
+      ],
+      "title": "amo-prod Healthy Host Count",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 7,
+      "panels": [],
+      "title": "amo-prod-versioncheck ALB",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Total requests received by the amo-prod-versioncheck ALB (fronts /update/VersionCheck.php). CloudWatch publishes only Sum for this metric.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod-versioncheck/4e942fe767db2956"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "RequestCount",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "RequestCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "amo-prod-versioncheck Request Count",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Target response time, p50 and p95. Alerted on p50 > 500ms for 15m in terraform/alerting-amo-edge.tf (baseline observed ~4-5ms).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod-versioncheck/4e942fe767db2956"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p50",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TargetResponseTime",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "p50"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod-versioncheck/4e942fe767db2956"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "p95",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "TargetResponseTime",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-west-2",
+          "statistic": "p95"
+        }
+      ],
+      "title": "amo-prod-versioncheck Target Response Time (p50 / p95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "ELB-generated 5xx vs target-generated 5xx. A self-computed 502 rate is alerted on at > 1% for 15m in terraform/alerting-amo-edge.tf.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod-versioncheck/4e942fe767db2956"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "HTTPCode_ELB_5XX_Count",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_ELB_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "LoadBalancer": "app/amo-prod-versioncheck/4e942fe767db2956"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "HTTPCode_Target_5XX_Count",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HTTPCode_Target_5XX_Count",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-west-2",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "amo-prod-versioncheck 5xx (ELB vs Target)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Healthy targets in the amo-prod-versioncheck target group (targetgroup/amo-prod-versioncheck/b0b7baf1dda76d89).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "TargetGroup": "targetgroup/amo-prod-versioncheck/b0b7baf1dda76d89",
+            "LoadBalancer": "app/amo-prod-versioncheck/4e942fe767db2956"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "HealthyHostCount",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "HealthyHostCount",
+          "metricQueryType": 0,
+          "namespace": "AWS/ApplicationELB",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Average"
+        }
+      ],
+      "title": "amo-prod-versioncheck Healthy Host Count",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 12,
+      "panels": [],
+      "title": "atn-web-stream9 (web tier CPU)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "CPU utilization for each of the six atn-web-stream9 instances behind amo-prod, one series per instance so a single hot instance is never hidden behind five idle ones. Each instance is alerted on individually at > 85% for 15m in terraform/alerting-amo-edge.tf (observed max over a day peaked at ~76% without incident). Do not modify these instances -- see the ATN hard limits.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "InstanceId": "i-0849417b39e5cd75e"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "i-0849417b39e5cd75e",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/EC2",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-west-2",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "InstanceId": "i-075985a014e760311"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "i-075985a014e760311",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/EC2",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-west-2",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "InstanceId": "i-09a11d743640d180f"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "i-09a11d743640d180f",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/EC2",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "C",
+          "region": "us-west-2",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "InstanceId": "i-0a028de0ae13a553d"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "i-0a028de0ae13a553d",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/EC2",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "D",
+          "region": "us-west-2",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "InstanceId": "i-09f6e881c22059948"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "i-09f6e881c22059948",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/EC2",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "E",
+          "region": "us-west-2",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "InstanceId": "i-0de43f666a95415d0"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "i-0de43f666a95415d0",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CPUUtilization",
+          "metricQueryType": 0,
+          "namespace": "AWS/EC2",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "F",
+          "region": "us-west-2",
+          "statistic": "Average"
+        }
+      ],
+      "title": "atn-web-stream9 CPU Utilization (all six instances)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "id": 14,
+      "panels": [],
+      "title": "CloudFront edges (versioncheck + services)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Total viewer requests for both distributions. CloudFront is global: AWS/CloudFront metrics publish in us-east-1 only, so the region is overridden per query on this us-west-2-default datasource.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 51
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "E1PQMC7BGJOP5E",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "versioncheck (E1PQMC7BGJOP5E)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Requests",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Sum"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "EGX44RIFURRUW",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "services (EGX44RIFURRUW)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "Requests",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "Sum"
+        }
+      ],
+      "title": "CloudFront Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Percentage (0-100) of viewer requests answered with a 5xx, both distributions. Alerted on at > 5% for 15m, gated on more than 50 requests in the bucket, in terraform/alerting-amo-edge.tf.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "E1PQMC7BGJOP5E",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "versioncheck (E1PQMC7BGJOP5E)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "EGX44RIFURRUW",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "services (EGX44RIFURRUW)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "5xxErrorRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "CloudFront 5xx Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${cloudwatch_tb_legacy_uid}"
+      },
+      "description": "Percentage (0-100) of viewer requests served from the edge cache, both distributions. Expect this to read empty: neither distribution has a CloudFront MonitoringSubscription enabled (verified read-only, NoSuchMonitoringSubscription), and CacheHitRate only publishes when one is. Enabling it is an AWS change in the legacy account and is out of scope here.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 59
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "E1PQMC7BGJOP5E",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "versioncheck (E1PQMC7BGJOP5E)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheHitRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "A",
+          "region": "us-east-1",
+          "statistic": "Average"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${cloudwatch_tb_legacy_uid}"
+          },
+          "dimensions": {
+            "DistributionId": "EGX44RIFURRUW",
+            "Region": "Global"
+          },
+          "expression": "",
+          "id": "",
+          "legendFormat": "services (EGX44RIFURRUW)",
+          "matchExact": true,
+          "metricEditorMode": 0,
+          "metricName": "CacheHitRate",
+          "metricQueryType": 0,
+          "namespace": "AWS/CloudFront",
+          "period": "300",
+          "queryMode": "Metrics",
+          "refId": "B",
+          "region": "us-east-1",
+          "statistic": "Average"
+        }
+      ],
+      "title": "CloudFront Cache Hit Rate (expect empty - see description)",
+      "type": "timeseries"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "amo",
+    "addons-server",
+    "alb",
+    "cloudfront",
+    "ec2"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "AMO - Production Overview",
+  "uid": "amo-production-overview",
+  "version": 1
+}

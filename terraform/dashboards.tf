@@ -100,6 +100,18 @@ resource "grafana_dashboard" "bamboohr_cal_sync" {
   config_json = file("${path.module}/dashboards/core-services/bamboohr-cal-sync.json")
 }
 
+# BambooHR-fed HR services on mzla-workloads (platform-infrastructure #1209).
+# Alert rules for both live in alerting-bamboohr-services.tf.
+resource "grafana_dashboard" "bamboohr_anniversary_mailer" {
+  folder      = grafana_folder.core_services.id
+  config_json = file("${path.module}/dashboards/core-services/bamboohr-anniversary-mailer.json")
+}
+
+resource "grafana_dashboard" "bamboohr_coursera_inviter" {
+  folder      = grafana_folder.core_services.id
+  config_json = file("${path.module}/dashboards/core-services/bamboohr-coursera-inviter.json")
+}
+
 resource "grafana_dashboard" "thundermail_ticket_spike_monitor" {
   folder      = grafana_folder.core_services.id
   config_json = file("${path.module}/dashboards/core-services/thundermail-ticket-spike-monitor.json")

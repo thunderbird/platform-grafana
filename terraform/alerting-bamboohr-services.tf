@@ -187,10 +187,9 @@ resource "grafana_rule_group" "bamboohr_anniversary_mailer" {
 # bamboohr-coursera-inviter (platform-infrastructure #1209)
 # Daily CronJob, namespace bamboohr-coursera-inviter on mzla-workloads.
 #
-# PAUSED: the service is not deployed yet (#1209), so these rules would sit in
-# NoData=Alerting forever. is_paused = true keeps them provisioned but not
-# evaluated; flip to false in the platform-grafana PR that pairs with the
-# platform-infrastructure PR unsuspending the CronJob.
+# Unpaused 2026-09-30 alongside platform-infrastructure#1250, which
+# unsuspended the CronJob. Metrics were already present from the validation
+# runs, so the staleness rule does not start in NoData.
 # ---------------------------------------------------------------------------
 resource "grafana_rule_group" "bamboohr_coursera_inviter" {
   name               = "bamboohr-coursera-inviter"
@@ -204,7 +203,6 @@ resource "grafana_rule_group" "bamboohr_coursera_inviter" {
     for            = "15m"
     no_data_state  = "Alerting"
     exec_err_state = "Error"
-    is_paused      = true
     labels = {
       severity = "ticket"
       service  = "bamboohr-coursera-inviter"
@@ -276,7 +274,6 @@ resource "grafana_rule_group" "bamboohr_coursera_inviter" {
     for            = "5m"
     no_data_state  = "OK"
     exec_err_state = "Error"
-    is_paused      = true
     labels = {
       severity = "ticket"
       service  = "bamboohr-coursera-inviter"

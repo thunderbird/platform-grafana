@@ -21,7 +21,7 @@ platform-grafana/
 │       ├── teleport/            # Sessions, backend/audit
 │       ├── keycloak/            # Login rates, sessions, JVM
 │       ├── core-services/       # ESO, external-dns, cert-manager, AWS LB
-│       └── appointment/         # CloudFront edge (CloudWatch, not VictoriaMetrics)
+│       └── appointment/         # CloudFront edge (CloudWatch) and the tb-dev stage dashboard
 ```
 
 ## Running Locally

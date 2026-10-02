@@ -20,13 +20,11 @@
 #   403 / 0 / 5xx / bad 302     -> CloudflareAccessGateProbeBroken  warning
 #   no series                   -> CloudflareAccessGateProbeAbsent  warning
 #
-# ALL THREE SHIP PAUSED (is_paused = true). Until platform-infrastructure #1205 arms the
-# gate, 200 is the CORRECT reading and GateOpen would page continuously. Unpause in a
-# follow-up PR:
-#   - ProbeBroken + ProbeAbsent once the probe (platform-infrastructure #1261) is running
-#     and reads a clean status (200 before #1205, 302 after) -- i.e. the secret and the WAF
-#     skip rule both exist and match.
-#   - GateOpen only after #1205 is armed and probe_http_status_code has read 302 steadily.
+# All three are ACTIVE. They shipped paused (platform-grafana #53) because 200 was correct
+# until platform-infrastructure #1205 armed the gate (2026-10-02 19:37Z). They were unpaused
+# once the probe (platform-infrastructure #1261) read probe_http_status_code 302 and
+# probe_success 1 steadily. If the gate is ever deliberately removed (rollback per
+# docs/cloudflare-access.md), pause GateOpen first or it pages within ~5 minutes.
 #
 # Structure mirrors alerting-kargo.tf: A = PromQL, B = reduce, C = threshold. Each A wraps
 # its selector in count by (instance) so the value is 1 per offending host (probe_success == 0
@@ -49,11 +47,10 @@ resource "grafana_rule_group" "cloudflare_access_gate" {
   # probe is ProbeAbsent's job, at warning, so a dead exporter can never page through here.
   # for = 5m rides out a single odd scrape; a real fail-open persists.
   rule {
-    name      = "CloudflareAccessGateOpen"
-    condition = "C"
-    for       = "5m"
-    # Paused until #1205 arms the gate: today 200 is correct and this would page nonstop.
-    is_paused      = true
+    name           = "CloudflareAccessGateOpen"
+    condition      = "C"
+    for            = "5m"
+    is_paused      = false
     no_data_state  = "OK"
     exec_err_state = "Error"
     labels = {
@@ -132,7 +129,7 @@ resource "grafana_rule_group" "cloudflare_access_gate" {
     name           = "CloudflareAccessGateProbeBroken"
     condition      = "C"
     for            = "15m"
-    is_paused      = true
+    is_paused      = false
     no_data_state  = "OK"
     exec_err_state = "Error"
     labels = {
@@ -209,7 +206,7 @@ resource "grafana_rule_group" "cloudflare_access_gate" {
     name           = "CloudflareAccessGateProbeAbsent"
     condition      = "C"
     for            = "15m"
-    is_paused      = true
+    is_paused      = false
     no_data_state  = "OK"
     exec_err_state = "Error"
     labels = {

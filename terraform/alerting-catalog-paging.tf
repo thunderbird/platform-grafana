@@ -1222,9 +1222,10 @@ resource "grafana_rule_group" "catalog_argocd" {
     #     still surfaces in Slack rather than disappearing.
     # The name!~ regex is anchored implicitly by Prometheus (full-string match), so
     # these exclude exactly those two apps, not substrings.
-    # tb-dev and tb-prod apps (project=~"tb-dev.*" / "tb-prod.*") are excluded here
-    # and handled by the warning-only ArgoCDApplicationDegradedTbDev /
-    # ArgoCDApplicationDegradedTbProd rules below (-> Slack, no page). tb-prod paging
+    # tb-dev, tb-prod and tb-stage apps (project=~"tb-dev.*" / "tb-prod.*" /
+    # "tb-stage.*") are excluded here and handled by the warning-only
+    # ArgoCDApplicationDegradedTbDev / ArgoCDApplicationDegradedTbProd /
+    # ArgoCDApplicationDegradedTbStage rules below (-> Slack, no page). tb-prod paging
     # is PAUSED for now (recurring thundermail nginx CrashLoopBackOff); revert by
     # dropping project!~"tb-prod.*" here and deleting the TbProd rule. ArgoCD runs on
     # shared01 but manages apps across all clusters, so this cluster="mzla-eks-shared01"
@@ -1239,7 +1240,7 @@ resource "grafana_rule_group" "catalog_argocd" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!~\"thundermail-ticket-spike-monitor|aaq-scraper\",project!~\"tb-dev.*\",project!~\"tb-prod.*\"})"
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",name!~\"thundermail-ticket-spike-monitor|aaq-scraper\",project!~\"tb-dev.*\",project!~\"tb-prod.*\",project!~\"tb-stage.*\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200
@@ -1317,6 +1318,78 @@ resource "grafana_rule_group" "catalog_argocd" {
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
         expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-dev.*\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  # --- App Degraded on tb-stage: warning-only (Slack, no page) ---
+  rule {
+    name           = "ArgoCDApplicationDegradedTbStage"
+    condition      = "C"
+    for            = "15m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-tb-stage01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application {{ $labels.name }} is Degraded on tb-stage"
+      description = "ArgoCD application {{ $labels.name }} (tb-stage cluster) has been health_status=Degraded for 15m. tb-stage is a staging environment, so this is warning-only (Slack, no page). Check the app in ArgoCD; if it is a real staging outage that needs attention, follow up manually."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-stage.*\"})"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

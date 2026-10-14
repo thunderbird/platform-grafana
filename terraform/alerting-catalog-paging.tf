@@ -1361,78 +1361,6 @@ resource "grafana_rule_group" "catalog_argocd" {
     }
   }
 
-  # --- App Degraded on tb-stage: warning-only (Slack, no page) ---
-  rule {
-    name           = "ArgoCDApplicationDegradedTbStage"
-    condition      = "C"
-    for            = "15m"
-    no_data_state  = "OK"
-    exec_err_state = "Error"
-    labels = {
-      severity = "warning"
-      cluster  = "mzla-eks-tb-stage01"
-      service  = "argocd"
-    }
-    annotations = {
-      summary     = "ArgoCD application {{ $labels.name }} is Degraded on tb-stage"
-      description = "ArgoCD application {{ $labels.name }} (tb-stage cluster) has been health_status=Degraded for 15m. tb-stage is a staging environment, so this is warning-only (Slack, no page). Check the app in ArgoCD; if it is a real staging outage that needs attention, follow up manually."
-      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
-    }
-
-    data {
-      ref_id         = "A"
-      datasource_uid = var.prometheus_datasource_uid
-      relative_time_range {
-        from = 900
-        to   = 0
-      }
-      model = jsonencode({
-        refId         = "A"
-        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-stage.*\"})"
-        instant       = true
-        intervalMs    = 1000
-        maxDataPoints = 43200
-      })
-    }
-    data {
-      ref_id         = "B"
-      datasource_uid = "__expr__"
-      relative_time_range {
-        from = 900
-        to   = 0
-      }
-      model = jsonencode({
-        refId      = "B"
-        type       = "reduce"
-        expression = "A"
-        reducer    = "last"
-        datasource = { type = "__expr__", uid = "__expr__" }
-      })
-    }
-    data {
-      ref_id         = "C"
-      datasource_uid = "__expr__"
-      relative_time_range {
-        from = 900
-        to   = 0
-      }
-      model = jsonencode({
-        refId      = "C"
-        type       = "threshold"
-        expression = "B"
-        datasource = { type = "__expr__", uid = "__expr__" }
-        conditions = [{
-          type      = "query"
-          evaluator = { type = "gt", params = [0] }
-          operator  = { type = "and" }
-          query     = { params = ["C"] }
-          reducer   = { type = "last", params = [] }
-        }]
-      })
-    }
-  }
-
   # --- App Degraded on tb-prod: warning-only (Slack, no page) — TEMPORARY ---
   # tb-prod paging is paused for now due to a recurring thundermail nginx
   # CrashLoopBackOff that was waking on-call. Same detection as
@@ -1795,6 +1723,78 @@ resource "grafana_rule_group" "catalog_argocd" {
       datasource_uid = "__expr__"
       relative_time_range {
         from = 1800
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  # --- App Degraded on tb-stage: warning-only (Slack, no page) ---
+  rule {
+    name           = "ArgoCDApplicationDegradedTbStage"
+    condition      = "C"
+    for            = "15m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-tb-stage01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application {{ $labels.name }} is Degraded on tb-stage"
+      description = "ArgoCD application {{ $labels.name }} (tb-stage cluster) has been health_status=Degraded for 15m. tb-stage is a staging environment, so this is warning-only (Slack, no page). Check the app in ArgoCD; if it is a real staging outage that needs attention, follow up manually."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/80"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "sum by (name) (argocd_app_info{cluster=\"mzla-eks-shared01\",health_status=\"Degraded\",project=~\"tb-stage.*\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
         to   = 0
       }
       model = jsonencode({

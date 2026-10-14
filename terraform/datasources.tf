@@ -61,6 +61,18 @@ resource "grafana_data_source" "cloudwatch_tb_prod" {
   })
 }
 
+# Cross-account CloudWatch Logs - tb-stage (539160020475)
+resource "grafana_data_source" "cloudwatch_tb_stage" {
+  type = "cloudwatch"
+  name = "CloudWatch Logs - tb-stage01"
+
+  json_data_encoded = jsonencode({
+    defaultRegion = "eu-central-1"
+    authType      = "assumeRole"
+    assumeRoleArn = "arn:aws:iam::539160020475:role/mzla-tb-stage-grafana-cloudwatch"
+  })
+}
+
 # Cross-account CloudWatch - thunderbird-legacy (768512802988) - added for
 # thunderbird/addons-server#394. This account holds live AMO production (amo-prod,
 # amo-prod-versioncheck ALBs; the atn-web-stream9 EC2 fleet; the versioncheck/services

@@ -1595,6 +1595,150 @@ resource "grafana_rule_group" "catalog_argocd" {
       })
     }
   }
+
+  # --- application-controller memory near limit: catches sustained growth; short reconcile spikes are left to ArgoCDControllerOOMKilled ---
+  rule {
+    name           = "ArgoCDControllerMemoryNearLimit"
+    condition      = "C"
+    for            = "15m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-shared01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application-controller {{ $labels.pod }} memory is above 80% of its limit on shared01"
+      description = "ArgoCD application-controller pod {{ $labels.pod }} on shared01 has used more than 80% of its memory limit for 15 minutes straight. Its baseline has grown, so the next reconcile spike is likely to OOMKill it. An OOMKill restarts the controller and pauses reconcile/self-heal for every cluster until its caches rebuild. Warning-only (low-urgency PagerDuty, posted to Slack). Raise controller.resources.limits.memory in argocd/helm-values/argocd.yaml (platform-infrastructure) or reduce controller load."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/1343"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "max by (pod) (container_memory_working_set_bytes{cluster=\"mzla-eks-shared01\",namespace=\"argocd\",container=\"application-controller\"}) / max by (pod) (kube_pod_container_resource_limits{cluster=\"mzla-eks-shared01\",namespace=\"argocd\",container=\"application-controller\",resource=\"memory\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0.8] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  # --- application-controller OOMKilled: it restarts in ~1s, so the up-based and CrashLoop rules miss it ---
+  rule {
+    name           = "ArgoCDControllerOOMKilled"
+    condition      = "C"
+    for            = "0s"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-shared01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application-controller {{ $labels.pod }} was OOMKilled on shared01"
+      description = "ArgoCD application-controller pod {{ $labels.pod }} on shared01 was OOMKilled and restarted in the last 30 minutes. Reconcile/self-heal paused for every cluster while it rebuilt its caches; repeated OOMs stall it. Warning-only (low-urgency PagerDuty, posted to Slack). Raise controller.resources.limits.memory in argocd/helm-values/argocd.yaml (platform-infrastructure) or reduce controller load."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/1343"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 1800
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "(max by (pod) (increase(kube_pod_container_status_restarts_total{cluster=\"mzla-eks-shared01\",namespace=\"argocd\",container=\"application-controller\"}[30m])) > 0) and on (pod) (max by (pod) (kube_pod_container_status_last_terminated_reason{cluster=\"mzla-eks-shared01\",namespace=\"argocd\",container=\"application-controller\",reason=\"OOMKilled\"}) == 1)"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 1800
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 1800
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
 }
 
 # ---------------------------------------------------------------------------

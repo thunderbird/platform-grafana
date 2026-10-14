@@ -1595,6 +1595,83 @@ resource "grafana_rule_group" "catalog_argocd" {
       })
     }
   }
+
+  # --- application-controller memory near limit: warning-only (Slack, no page) ---
+  # Early warning before the controller is OOMKilled (which stalls reconcile
+  # fleet-wide). Ratio of cadvisor working set to the kube-state-metrics memory
+  # limit, per pod; both sides reduced `max by (pod)` so their differing label
+  # sets match. No limit set -> no series -> OK (the down rule above still covers
+  # a crash). thunderbird/platform-infrastructure#1343.
+  rule {
+    name           = "ArgoCDControllerMemoryNearLimit"
+    condition      = "C"
+    for            = "15m"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-shared01"
+      service  = "argocd"
+    }
+    annotations = {
+      summary     = "ArgoCD application-controller {{ $labels.pod }} memory is above 80% of its limit on shared01"
+      description = "ArgoCD application-controller pod {{ $labels.pod }} on shared01 has had its memory working set above 80% of its memory limit for 15m. If it reaches the limit it is OOMKilled and reconcile/self-heal stalls across every cluster. Warning-only (Slack, no page). Raise controller.resources.limits.memory in argocd/helm-values/argocd.yaml (platform-infrastructure) or reduce controller load."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/1343"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "max by (pod) (container_memory_working_set_bytes{cluster=\"mzla-eks-shared01\",namespace=\"argocd\",container=\"application-controller\"}) / max by (pod) (kube_pod_container_resource_limits{cluster=\"mzla-eks-shared01\",namespace=\"argocd\",container=\"application-controller\",resource=\"memory\"})"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "gt", params = [0.8] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
 }
 
 # ---------------------------------------------------------------------------

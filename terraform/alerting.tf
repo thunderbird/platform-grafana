@@ -64,7 +64,8 @@ resource "grafana_contact_point" "pagerduty_platform_infra_low" {
 # Reproduce any imported UI child routes ABOVE the PagerDuty route below, and
 # set contact_point to the actual live default observed from the import.
 resource "grafana_notification_policy" "root" {
-  disable_provenance = true
+  # Provisioned, so read-only in the UI (platform-infrastructure#1430). One-way:
+  # Grafana won't make it editable again, so a plain revert won't apply.
 
   # Match the live root ordering ([grafana_folder, alertname]) and default
   # receiver exactly, so the apply only ADDS the PagerDuty child route below.

@@ -59,7 +59,7 @@ resource "grafana_folder" "legacy_services" {
 }
 
 # UI-built developer dashboards; Terraform manages only the folder, never its dashboards.
-# To stop managing it, use `removed { from = grafana_folder.developers  lifecycle { destroy = false } }`.
+# To stop managing it, replace this resource with a `removed` block (from = grafana_folder.developers) whose lifecycle sets destroy = false.
 # Never set prevent_destroy_if_not_empty to false: that force-deletes the contents.
 resource "grafana_folder" "developers" {
   title = "Developers"

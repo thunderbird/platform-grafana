@@ -61,6 +61,8 @@ The easiest workflow for complex changes:
 
 UI edits are **not persisted** — the next `terraform apply` will revert them. Always save changes back to this repo.
 
+Exception: the `Developers` folder (`grafana_folder.developers`) is UI-only; Terraform leaves its contents alone. Don't export them into `terraform/dashboards/`.
+
 ### Adding a New Dashboard
 
 1. Create or export the dashboard JSON from Grafana

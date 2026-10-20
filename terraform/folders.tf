@@ -58,9 +58,9 @@ resource "grafana_folder" "legacy_services" {
   title = "Legacy Services"
 }
 
-# For dashboards developers build in the UI. Terraform manages only the folder, so
-# dashboards saved here are not reverted on apply. Do not add grafana_dashboard
-# resources pointing at this folder.
+# UI-built developer dashboards; Terraform manages only the folder, never its dashboards.
+# To stop managing it, use `removed { from = grafana_folder.developers  lifecycle { destroy = false } }`.
+# Never set prevent_destroy_if_not_empty to false: that force-deletes the contents.
 resource "grafana_folder" "developers" {
   title = "Developers"
 

@@ -15,9 +15,9 @@ locals {
 resource "grafana_contact_point" "pagerduty_platform_infra" {
   name = "pagerduty-platform-infra"
 
-  # Provisioned, so read-only in the UI (platform-infrastructure#1430).
-  # disable_provenance is ForceNew: changing it replaces this contact point, and
-  # Grafana refuses to delete one a policy still routes to.
+  # TF-provisioned alerting resources are otherwise read-only in the UI and can
+  # error on re-apply; disable_provenance keeps them editable/idempotent.
+  disable_provenance = true
 
   pagerduty {
     integration_key = local.pagerduty_routing_key
@@ -42,7 +42,7 @@ resource "grafana_contact_point" "pagerduty_platform_infra" {
 resource "grafana_contact_point" "pagerduty_platform_infra_low" {
   name = "pagerduty-platform-infra-low"
 
-  # Provisioned, so read-only in the UI. Same replace caveat as above.
+  disable_provenance = true
 
   pagerduty {
     integration_key = local.pagerduty_routing_key
@@ -64,8 +64,8 @@ resource "grafana_contact_point" "pagerduty_platform_infra_low" {
 # Reproduce any imported UI child routes ABOVE the PagerDuty route below, and
 # set contact_point to the actual live default observed from the import.
 resource "grafana_notification_policy" "root" {
-  # Provisioned, so read-only in the UI (platform-infrastructure#1430).
-  # Updates in place. Grafana rejects setting disable_provenance = true again.
+  # Provisioned, so read-only in the UI (platform-infrastructure#1430). One-way:
+  # Grafana won't make it editable again, so a plain revert won't apply.
 
   # Match the live root ordering ([grafana_folder, alertname]) and default
   # receiver exactly, so the apply only ADDS the PagerDuty child route below.

@@ -1,16 +1,16 @@
-# Cloudflare Access gate on metabase.thunderbird.net -- inverted probe alerting
-# (platform-infrastructure #1200).
+# Cloudflare Access gates on metabase.thunderbird.net and twenty.thunderbird.net -- inverted
+# probe alerting (platform-infrastructure #1200, PE-Routing #27).
 #
 # The gated CloudflareAccessApplication CR carries no prevent-destroy annotation, so an
 # ArgoCD prune, a deleted Application, or an operator that loses its token removes the
-# Cloudflare application and ungates the host. Metabase stays up and ArgoCD stays Synced:
+# Cloudflare application and ungates the host. The app stays up and ArgoCD stays Synced:
 # nothing else notices.
 #
 # The probe is blackbox-exporter on mzla-eks-shared01 (platform-infrastructure
 # argocd/observability/vmprobe-cloudflare-access-gate.yaml, job=cloudflare-access-gate).
-# It GETs https://metabase.thunderbird.net/api/health without following redirects, with a
-# secret x-gate-probe header that a path-scoped WAF rule matches to skip Super Bot Fight
-# Mode. Module http_access_gate passes only on a 302 to thunderbird.cloudflareaccess.com.
+# It GETs each gated host's health path (Metabase /api/health, Twenty /healthz) without
+# following redirects, with a secret x-gate-probe header that a host- and path-scoped WAF
+# rule matches to skip Super Bot Fight Mode. Module http_access_gate passes only on a 302 to thunderbird.cloudflareaccess.com.
 #
 # These rules read probe_http_status_code rather than probe_success, because probe_success
 # is 0 both when the gate is OPEN (200) and when the PROBE is broken (403 challenge, timeout),
@@ -139,7 +139,7 @@ resource "grafana_rule_group" "cloudflare_access_gate" {
     }
     annotations = {
       summary     = "Cloudflare Access gate probe is broken for {{ $labels.instance }}"
-      description = "The gate probe for {{ $labels.instance }} has failed for 15 minutes with something other than HTTP 200, so the gate is currently UNMONITORED (this is not a fail-open). Check probe_http_status_code{job=\"cloudflare-access-gate\"}: 403 means Super Bot Fight Mode challenged it, i.e. the WAF skip rule for /api/health is gone or no longer matches mzla/shared-services/metabase-gate-probe (header_value); 0 means timeout, DNS or TLS failure from shared01; 302 with probe_success 0 means the redirect no longer points at thunderbird.cloudflareaccess.com; 5xx means Metabase or the tunnel is down. Runbook: docs/observability.md Synthetic probes."
+      description = "The gate probe for {{ $labels.instance }} has failed for 15 minutes with something other than HTTP 200, so the gate is currently UNMONITORED (this is not a fail-open). Check probe_http_status_code{job=\"cloudflare-access-gate\"}: 403 means Super Bot Fight Mode challenged it, i.e. the WAF skip rule for that host and path is gone or no longer matches mzla/shared-services/metabase-gate-probe (header_value); 0 means timeout, DNS or TLS failure from shared01; 302 with probe_success 0 means the redirect no longer points at thunderbird.cloudflareaccess.com; 5xx means the app (Metabase, Twenty) or its tunnel is down. Runbook: docs/observability.md Synthetic probes."
       runbook_url = "https://github.com/thunderbird/platform-infrastructure/blob/main/docs/observability.md#synthetic-probes-blackbox-exporter"
     }
 

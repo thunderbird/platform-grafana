@@ -9,30 +9,25 @@ prometheus_datasource_uid = "P4169E866C3094E38"
 # while it is false, a datasource error reads as OK instead of notifying Slack every
 # interval.
 #
-# appointment_origin_cert_arn is different in kind: that certificate exists TODAY (the
-# AWS Load Balancer Controller minted it for the appointment-origin-tb-dev Ingress in
-# appointment-deploy), it simply has to be looked up in 718959508124 / eu-central-1. It
-# is empty here only because it could not be resolved from this repo without AWS
-# credentials, and a guessed ARN would fire the rule permanently. It is the cert in the
-# CloudFront -> ALB TLS path, so leaving it empty means that handshake has no expiry
-# coverage — resolve it first. Setting all four is the follow-up PR that arms
-# everything; the checklist is in the .tf header.
+# appointment_origin_cert_arn and send_origin_cert_arn both pin the Pulumi-managed
+# *.main.dev-thundermail.com wildcard (platform-infrastructure #1453) that both origin
+# Ingresses use. It is the cert in the CloudFront -> ALB TLS path; the checklist is in
+# the .tf header.
 appointment_distribution_id     = "E23SXSLKOB1ULS"
 appointment_health_check_id     = "c576809f-6068-4cf5-9101-ce4486648ee6"
-appointment_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/54127ee5-bc4c-47a4-883a-b407a4152ac2"
+appointment_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/474234d8-046c-44df-a25e-e3f35a631968"
 appointment_metrics_iam_granted = true
 
 # Send CloudFront edge (platform-infrastructure #1043). Every resource exists today
-# (#895 distribution + MonitoringSubscription + certs, #1052 health check, #951/#1048
-# the CloudWatch grant), so every knob is pinned HERE rather than defaulted -- including
-# send_metrics_iam_granted, whose variable defaults false so another environment cannot
-# inherit a grant it does not have. Cert ARNs resolved live in 718959508124: viewer in
-# us-east-1, origin in eu-central-1 (host send-origin.tb-dev.thunderbird.dev). The public
-# ALB cert remains pinned inline in alerting-send-edge.tf.
+# (#895 distribution + MonitoringSubscription, #1489 viewer cert, #1453 origin wildcard,
+# #1052 health check, #951/#1048 the CloudWatch grant), so every knob is pinned HERE
+# rather than defaulted -- including send_metrics_iam_granted, whose variable defaults
+# false so another environment cannot inherit a grant it does not have. Viewer cert in
+# us-east-1, origin in eu-central-1 (host send-origin.main.dev-thundermail.com).
 send_distribution_id     = "E1O1C4QY9LB2MO"
 send_health_check_id     = "da628e81-e6ef-41fc-baa1-e48009de8682"
-send_viewer_cert_arn     = "arn:aws:acm:us-east-1:718959508124:certificate/a8e5927e-a6fe-4a8b-8dac-8d72e579d05c"
-send_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/8d6677fc-723e-4f6b-a17f-c9334fa31371"
+send_viewer_cert_arn     = "arn:aws:acm:us-east-1:718959508124:certificate/81c8b1f4-9a94-424e-8f10-eeb833142f84"
+send_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/474234d8-046c-44df-a25e-e3f35a631968"
 send_metrics_iam_granted = true
 
 # AMO production edge (thunderbird/addons-server#394). false until the

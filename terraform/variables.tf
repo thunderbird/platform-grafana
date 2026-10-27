@@ -13,9 +13,9 @@ variable "prometheus_datasource_uid" {
 # #826 and do not exist yet. The alert rule groups in alerting-appointment-edge.tf are
 # count-gated on the ID/ARN variables being non-empty, so until they are filled in no
 # rule is created and nothing can fire NoData/Error against a resource that does not
-# exist. appointment_origin_cert_arn is the exception in origin: that cert exists today
-# (appointment-deploy created it), it just has to be looked up. All four are set
-# together in one follow-up PR — see the checklist in that file's header.
+# exist. appointment_origin_cert_arn is the exception in origin: it pins the existing
+# *.main.dev-thundermail.com wildcard. All four are set together in one follow-up PR;
+# see the checklist in that file's header.
 
 variable "appointment_distribution_id" {
   description = "CloudFront distribution ID for the tb-dev appointment edge (created by platform-infrastructure PR #844). Also seeds the Distribution picker's default and filter regex on the cloudfront-edge dashboard. Empty string disables the CloudFront and viewer-cert rule groups."
@@ -24,13 +24,13 @@ variable "appointment_distribution_id" {
 }
 
 variable "appointment_health_check_id" {
-  description = "Route53 health check ID for https://appointment.tb-dev.thunderbird.dev/ (created by the Pulumi half of platform-infrastructure #826). Empty string disables the synthetic-check rule group; the dashboard's two Route53 panels still render, on an empty series."
+  description = "Route53 health check ID for https://appointment.main.dev-thundermail.com/ (created by the Pulumi half of platform-infrastructure #826). Empty string disables the synthetic-check rule group; the dashboard's two Route53 panels still render, on an empty series."
   type        = string
   default     = ""
 }
 
 variable "appointment_origin_cert_arn" {
-  description = "Full ACM ARN of the certificate on the DEDICATED CloudFront ORIGIN Ingress (eu-central-1, appointment-origin-tb-dev, host appointment-origin.tb-dev.thunderbird.dev). This is the certificate in the CloudFront -> ALB TLS path, and it is a DIFFERENT object from the live PUBLIC Ingress cert d324b88c-… that alerting-appointment-edge.tf pins inline. It is minted by the AWS Load Balancer Controller from thunderbird/appointment-deploy, so the ARN is not knowable from this repo and must be looked up — step 0 of the checklist in that file's header. Empty string disables the origin-ALB cert-expiry rule group; a guessed value would query a non-existent dimension and, given no_data_state = \"Alerting\", fire permanently, so absent is preferred to wrong."
+  description = "Full ACM ARN of the certificate on the DEDICATED CloudFront ORIGIN Ingress (eu-central-1, appointment-origin-main, host appointment-origin.main.dev-thundermail.com). This is the certificate in the CloudFront -> ALB TLS path: the Pulumi-managed *.main.dev-thundermail.com wildcard (platform-infrastructure #1453), shared with send_origin_cert_arn. Empty string disables the origin-ALB cert-expiry rule group; a guessed value would query a non-existent dimension and, given no_data_state = \"Alerting\", fire permanently, so absent is preferred to wrong."
   type        = string
   default     = ""
 }
@@ -43,9 +43,9 @@ variable "appointment_metrics_iam_granted" {
 
 # --- Send CloudFront edge (platform-infrastructure #1043) -----------------------
 # Unlike appointment's, every Send edge resource below EXISTS TODAY. The distribution
-# (E1O1C4QY9LB2MO), its MonitoringSubscription, all three certificates and the Route53
-# health check shipped with platform-infrastructure #895 / #1052, and the cross-account
-# Grafana CloudWatch grant is live (#951, extended by #1048). So these are pinned in
+# (E1O1C4QY9LB2MO), its MonitoringSubscription, both certificates and the Route53
+# health check shipped with platform-infrastructure #895 / #1052 / #1453 / #1489, and
+# the cross-account Grafana CloudWatch grant is live (#951, extended by #1048). So these are pinned in
 # terraform.tfvars from the start rather than left empty for a follow-up PR, and the
 # metrics-IAM flag defaults true. The variables are kept (rather than inlining the ids)
 # only so an id going stale disables its group via count instead of firing NoData on a
@@ -58,19 +58,19 @@ variable "send_distribution_id" {
 }
 
 variable "send_health_check_id" {
-  description = "Route53 health check ID for https://send.tb-dev.thunderbird.dev/api/health (da628e81-e6ef-41fc-baa1-e48009de8682, HTTPS_STR_MATCH on \"API is alive\", platform-infrastructure #1052). Empty string disables the synthetic-check rule group."
+  description = "Route53 health check ID for https://send.main.dev-thundermail.com/api/health (da628e81-e6ef-41fc-baa1-e48009de8682, HTTPS_STR_MATCH on \"API is alive\", platform-infrastructure #1052). Empty string disables the synthetic-check rule group."
   type        = string
   default     = ""
 }
 
 variable "send_viewer_cert_arn" {
-  description = "Full ACM ARN of the us-east-1 CloudFront VIEWER certificate for send.tb-dev.thunderbird.dev. Gates the viewer-cert expiry rule group on its own pin rather than on send_distribution_id: emptying the distribution pin (the documented escape hatch for a stale distribution) must not silently take cert-expiry monitoring with it. Empty string disables that group; a guessed ARN would query a non-existent dimension and, with no_data_state = \"Alerting\", fire permanently, so absent is preferred to wrong."
+  description = "Full ACM ARN of the us-east-1 CloudFront VIEWER certificate for send.main.dev-thundermail.com. Gates the viewer-cert expiry rule group on its own pin rather than on send_distribution_id: emptying the distribution pin (the documented escape hatch for a stale distribution) must not silently take cert-expiry monitoring with it. Empty string disables that group; a guessed ARN would query a non-existent dimension and, with no_data_state = \"Alerting\", fire permanently, so absent is preferred to wrong."
   type        = string
   default     = ""
 }
 
 variable "send_origin_cert_arn" {
-  description = "Full ACM ARN of the certificate on the DEDICATED CloudFront ORIGIN Ingress (eu-central-1, host send-origin.tb-dev.thunderbird.dev). This is the certificate in the CloudFront -> ALB TLS path and is a DIFFERENT object from the public Ingress cert pinned inline in alerting-send-edge.tf. It is minted by the AWS Load Balancer Controller from thunderbird/send-deploy, so it is a variable — if the controller re-mints it under a new ARN the pin can go stale. Empty string disables the origin-ALB cert-expiry rule group."
+  description = "Full ACM ARN of the certificate on the DEDICATED CloudFront ORIGIN Ingress (eu-central-1, send-origin-main, host send-origin.main.dev-thundermail.com). This is the certificate in the CloudFront -> ALB TLS path: the Pulumi-managed *.main.dev-thundermail.com wildcard (platform-infrastructure #1453), shared with appointment_origin_cert_arn. Empty string disables the origin-ALB cert-expiry rule group."
   type        = string
   default     = ""
 }

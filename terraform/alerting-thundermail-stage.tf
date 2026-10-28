@@ -76,6 +76,77 @@ resource "grafana_rule_group" "thundermail_stage" {
   }
 
   rule {
+    name           = "ThundermailStageCertExpiring"
+    condition      = "C"
+    for            = "1h"
+    no_data_state  = "OK"
+    exec_err_state = "Error"
+    labels = {
+      severity = "warning"
+      cluster  = "mzla-eks-tb-stage01"
+      service  = "thundermail"
+    }
+    annotations = {
+      summary     = "TLS certificate on {{ $labels.instance }} expires in under 14 days"
+      description = "probe_ssl_earliest_cert_expiry for {{ $labels.instance }} is less than 14 days away. nginx in namespace thundermail on mzla-eks-tb-stage01 serves a copy of the ACM certificate from a Kubernetes Secret, so ACM renewing the certificate does not refresh what clients see; the Secret has to be updated (thundermail-deploy docs/configuration.md). Only probes with TLS enabled (993, 465 and the HTTPS targets) publish this metric. tb-stage is a staging environment, so this is warning-only (Slack, no page)."
+      runbook_url = "https://github.com/thunderbird/platform-infrastructure/issues/1545"
+    }
+
+    data {
+      ref_id         = "A"
+      datasource_uid = var.prometheus_datasource_uid
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      model = jsonencode({
+        refId         = "A"
+        datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
+        expr          = "min by (instance) ((probe_ssl_earliest_cert_expiry{instance=~\".*stage-thundermail[.]com.*\"} - time()) / 86400)"
+        instant       = true
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "B"
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        datasource = { type = "__expr__", uid = "__expr__" }
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      model = jsonencode({
+        refId      = "C"
+        type       = "threshold"
+        expression = "B"
+        datasource = { type = "__expr__", uid = "__expr__" }
+        conditions = [{
+          type      = "query"
+          evaluator = { type = "lt", params = [14] }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { type = "last", params = [] }
+        }]
+      })
+    }
+  }
+
+  rule {
     name           = "ThundermailStageDeploymentUnavailable"
     condition      = "C"
     for            = "15m"
@@ -159,7 +230,7 @@ resource "grafana_rule_group" "thundermail_stage_nlb" {
     name           = "ThundermailStageNlbUnhealthyTargets"
     condition      = "C"
     for            = "10m"
-    no_data_state  = "OK"
+    no_data_state  = var.thundermail_stage_metrics_iam_granted ? "Alerting" : "OK"
     exec_err_state = var.thundermail_stage_metrics_iam_granted ? "Error" : "OK"
     labels = {
       severity = "warning"

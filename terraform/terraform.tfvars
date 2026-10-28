@@ -36,3 +36,6 @@ send_metrics_iam_granted = true
 # Matthew's go. Until then every query in alerting-amo-edge.tf gets AccessDenied, read as
 # exec_err_state = "OK" rather than paging Slack every interval.
 amo_metrics_iam_granted = false
+
+thundermail_stage_nlb_arn_suffix      = "net/stalwart-nginx-thundermail/612e25cfceb90999"
+thundermail_stage_metrics_iam_granted = false

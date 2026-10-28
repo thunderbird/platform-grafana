@@ -90,7 +90,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "probe_success{instance=~\".*stage-thundermail\\.com.*\"}",
+          "expr": "probe_success{instance=~\".*stage-thundermail[.]com.*\"}",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
@@ -148,7 +148,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "probe_duration_seconds{instance=~\".*stage-thundermail\\.com.*\"}",
+          "expr": "probe_duration_seconds{instance=~\".*stage-thundermail[.]com.*\"}",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
@@ -223,7 +223,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "(probe_ssl_earliest_cert_expiry{instance=~\".*stage-thundermail\\.com.*\"} - time()) / 86400",
+          "expr": "(probe_ssl_earliest_cert_expiry{instance=~\".*stage-thundermail[.]com.*\"} - time()) / 86400",
           "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"

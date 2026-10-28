@@ -87,3 +87,15 @@ variable "amo_metrics_iam_granted" {
   type        = bool
   default     = false
 }
+
+variable "thundermail_stage_nlb_arn_suffix" {
+  description = "CloudWatch LoadBalancer dimension of the tb-stage Stalwart NLB (the ARN suffix net/stalwart-nginx-thundermail/<id>; thundermail-deploy overlays/tb-stage-thundermail/nginx/service.yaml names it stalwart-nginx-thundermail). Seeds the NLB panels on the Thundermail stage dashboard and the thundermail-stage-nlb rule group. Empty string disables that group; the id changes if the Service is recreated, so re-read it with aws elbv2 describe-load-balancers in 539160020475."
+  type        = string
+  default     = ""
+}
+
+variable "thundermail_stage_metrics_iam_granted" {
+  description = "Whether the cross-account role mzla-tb-stage-grafana-cloudwatch (539160020475) grants cloudwatch:GetMetricData and ListMetrics. As of platform-infrastructure #1545 it only grants CloudWatch Logs (enable_metrics is unset for mzla-tb-stage), so every AWS/NetworkELB query through cloudwatch_tb_stage returns AccessDenied. While false the NLB rule reads that as exec_err_state = \"OK\" instead of notifying Slack every interval; flip to true in the PR that follows the Pulumi grant."
+  type        = bool
+  default     = false
+}

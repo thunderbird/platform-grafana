@@ -50,6 +50,10 @@ resource "grafana_folder" "amo" {
   title = "AMO"
 }
 
+resource "grafana_folder" "thundermail" {
+  title = "Thundermail"
+}
+
 # Scoped to services still on the legacy (pre-Kubernetes) deployment stack, as distinct
 # from the folders above that belong to the new stack. Accounts is the first tenant here;
 # send/thundermail/appointment can land their own Celery/Flower dashboards in this same

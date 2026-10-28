@@ -177,6 +177,14 @@ resource "grafana_dashboard" "send_cloudfront_edge" {
   })
 }
 
+resource "grafana_dashboard" "thundermail_stalwart_stage" {
+  folder = grafana_folder.thundermail.id
+  config_json = templatefile("${path.module}/dashboards/thundermail/stalwart-stage.json.tftpl", {
+    cloudwatch_tb_stage_uid          = grafana_data_source.cloudwatch_tb_stage.uid
+    thundermail_stage_nlb_arn_suffix = var.thundermail_stage_nlb_arn_suffix
+  })
+}
+
 # Legacy Services dashboards
 #
 # Accounts is the first tenant of this folder; see the header comment on

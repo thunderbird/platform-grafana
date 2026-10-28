@@ -31,7 +31,7 @@ resource "grafana_rule_group" "thundermail_stage" {
       model = jsonencode({
         refId         = "A"
         datasource    = { type = "prometheus", uid = var.prometheus_datasource_uid }
-        expr          = "count by (instance) (probe_success{instance=~\".*stage-thundermail\\\\.com.*\"} == 0)"
+        expr          = "count by (instance) (probe_success{instance=~\".*stage-thundermail\\.com.*\"} == 0)"
         instant       = true
         intervalMs    = 1000
         maxDataPoints = 43200

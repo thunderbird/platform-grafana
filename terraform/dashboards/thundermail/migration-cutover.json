@@ -2025,11 +2025,145 @@
         "type": "victoriametrics-logs-datasource",
         "uid": "PD775F2863313E6C7"
       },
+      "description": "ERROR lines in the selected range (same filter as the log panel beside it). 0 means the log panel's \"No data\" is genuinely quiet.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 41
+      },
+      "id": 76,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" | replace_regexp (\"\\x1b\\\\[[0-9;]*m\", \"\") at _msg | filter _msg:~\"^[^ ]+ ERROR \" -_msg:~\"http[.]x-forwarded-missing\" | stats () count()",
+          "queryType": "statsRange",
+          "refId": "A"
+        }
+      ],
+      "title": "Stalwart errors (range)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "WARN lines in the selected range (same filter as the log panel beside it). 0 means the log panel's \"No data\" is genuinely quiet.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 45
+      },
+      "id": 77,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" | replace_regexp (\"\\x1b\\\\[[0-9;]*m\", \"\") at _msg | filter _msg:~\"^[^ ]+ WARN \" -_msg:~\"http[.]x-forwarded-missing\" | stats () count()",
+          "queryType": "statsRange",
+          "refId": "A"
+        }
+      ],
+      "title": "Stalwart warnings (range)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
       "description": "x-forwarded-missing warnings (local health checks on :8080) are filtered out.",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 9,
+        "x": 15,
         "y": 41
       },
       "id": 27,

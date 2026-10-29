@@ -185,6 +185,15 @@ resource "grafana_dashboard" "thundermail_stalwart_stage" {
   })
 }
 
+# Cutover dashboard, first built in the UI and exported here. file() rather than
+# templatefile(): the JSON carries Grafana-side ${env}/${cw}/${nlb} variables.
+# overwrite adopts the existing UI copy (same uid) on first apply.
+resource "grafana_dashboard" "thundermail_migration_cutover" {
+  folder      = grafana_folder.thundermail.id
+  config_json = file("${path.module}/dashboards/thundermail/migration-cutover.json")
+  overwrite   = true
+}
+
 # Legacy Services dashboards
 #
 # Accounts is the first tenant of this folder; see the header comment on

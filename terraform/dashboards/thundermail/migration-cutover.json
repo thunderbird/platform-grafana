@@ -4756,7 +4756,7 @@
           "type": "timeseries"
         }
       ],
-      "title": "AWS NLB (CloudWatch; AccessDenied until the grafana-cloudwatch role gets cloudwatch:GetMetricData)",
+      "title": "AWS NLB (CloudWatch)",
       "type": "row"
     },
     {

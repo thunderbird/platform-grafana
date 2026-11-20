@@ -13,8 +13,8 @@ prometheus_datasource_uid = "P4169E866C3094E38"
 # *.main.dev-thundermail.com wildcard (platform-infrastructure #1453) that both origin
 # Ingresses use. It is the cert in the CloudFront -> ALB TLS path; the checklist is in
 # the .tf header.
-appointment_distribution_id     = "E23SXSLKOB1ULS"
-appointment_health_check_id     = "c576809f-6068-4cf5-9101-ce4486648ee6"
+appointment_distribution_id     = "E3N100V35V2PJD"
+appointment_health_check_id     = "21a1fad3-5826-5102-007e-5c0b3ce5c966"
 appointment_origin_cert_arn     = "arn:aws:acm:eu-central-1:718959508124:certificate/474234d8-046c-44df-a25e-e3f35a631968"
 appointment_metrics_iam_granted = true
 

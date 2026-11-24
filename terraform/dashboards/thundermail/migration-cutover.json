@@ -108,8 +108,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -118,7 +122,7 @@
             ]
           },
           "unit": "short",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -177,8 +181,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -246,8 +254,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "red",
@@ -256,7 +268,7 @@
             ]
           },
           "unit": "short",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -282,7 +294,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?cluster_(subscriber_error|subscriber_disconnected|publisher_error)(_total)?\"}[1h])) or vector(0)",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?cluster_(subscriber_error|subscriber_disconnected|publisher_error)(_total)?\"}[1h])) or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": true,
           "legendFormat": "",
           "range": false,
@@ -315,8 +327,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -329,7 +345,7 @@
             ]
           },
           "unit": "short",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -386,8 +402,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -400,7 +420,7 @@
             ]
           },
           "unit": "short",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -457,8 +477,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -471,7 +495,7 @@
             ]
           },
           "unit": "short",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -536,7 +560,7 @@
             ]
           },
           "unit": "percentunit",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -595,8 +619,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "text",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
               },
               {
                 "color": "orange",
@@ -609,7 +637,7 @@
             ]
           },
           "unit": "short",
-          "noValue": "0"
+          "noValue": "unknown"
         },
         "overrides": []
       },
@@ -635,7 +663,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?store_[a-z0-9_]*error(_total)?\"}[$__range])) or vector(0)",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?store_[a-z0-9_]*error(_total)?\"}[$__range])) or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": true,
           "legendFormat": "",
           "range": false,
@@ -2080,7 +2108,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum by (__name__) (increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?store_[a-z0-9_]*error(_total)?\"}[$__rate_interval]) keep_metric_names)",
+          "expr": "sum by (__name__) (increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?store_[a-z0-9_]*error(_total)?\"}[$__interval]) keep_metric_names)",
           "instant": false,
           "legendFormat": "{{__name__}}",
           "range": true,
@@ -2219,7 +2247,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?security_(authentication|abuse|scan|loiter)_ban(_total)?\"}[$__rate_interval])) * 60 or vector(0)",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?security_(authentication|abuse|scan|loiter)_ban(_total)?\"}[$__rate_interval])) * 60 or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": false,
           "legendFormat": "new ban",
           "range": true,
@@ -2347,7 +2375,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_authenticated_message_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_authenticated_message_queued(_total)?\"}[$__interval])) or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": false,
           "legendFormat": "user",
           "range": true,
@@ -2359,7 +2387,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_report_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_report_queued(_total)?\"}[$__interval])) or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": false,
           "legendFormat": "report",
           "range": true,
@@ -2371,7 +2399,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_dsn_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_dsn_queued(_total)?\"}[$__interval])) or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": false,
           "legendFormat": "bounce notice",
           "range": true,
@@ -2383,7 +2411,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_autogenerated_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_autogenerated_queued(_total)?\"}[$__interval])) or sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) * 0",
           "instant": false,
           "legendFormat": "automatic",
           "range": true,

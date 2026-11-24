@@ -44,7 +44,7 @@
       }
     ]
   },
-  "description": "Migration dashboard for the legacy -> EKS cutover of Accounts, Keycloak and Stalwart (platform-infrastructure #1536 for stage; reused for prod). Pick the environment with the env variable. Workload replicas, Argo/Kargo state, Stalwart mail flow from logs, Keycloak and Accounts health, blackbox probes, NLB.",
+  "description": "Operational health of Accounts, Keycloak and Stalwart on tb-prod and tb-stage. Pick the environment with the env variable. Started as the cutover dashboard for the legacy -> EKS move (platform-infrastructure #1536); the URL still carries that name.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -81,11 +81,2740 @@
   "panels": [
     {
       "collapsed": false,
+      "panels": [],
+      "title": "Operational health (Stalwart)",
+      "type": "row",
+      "id": 100,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Pods the Deployment wants minus pods whose metrics scrape succeeds. Anything above 0 is a pod we cannot see.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(kube_deployment_spec_replicas{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",deployment=\"stalwart\"}) - (sum(up{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\"}) or vector(0))",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Pods not reporting metrics",
+      "type": "stat",
+      "id": 101,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "Running pods whose last start has no cluster.startup after it. Such a pod does not receive directory changes made through another pod. Looks back 29 days whatever the dashboard range. Reads n/a when only one pod runs, because the coordinator is not needed.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "n/a"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "_time:29d cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" pod:in(_time:10m cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" | fields pod) (\"(server.startup)\" or \"(cluster.startup)\") | stats by (pod) max(_time) if (\"(server.startup)\") started, max(_time) if (\"(cluster.startup)\") clustered | filter started:* | stats count() pods, count() if (clustered:\"\" or clustered:lt_field(started)) stale | filter pods:>1 | fields stale",
+          "queryType": "stats",
+          "refId": "A"
+        }
+      ],
+      "title": "Pods without coordinator",
+      "type": "stat",
+      "timeFrom": "29d",
+      "hideTimeOverride": true,
+      "id": 102,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Publish, subscribe and disconnect errors on the cluster channel. A publish error drops that batch of cache invalidations.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?cluster_(subscriber_error|subscriber_disconnected|publisher_error)(_total)?\"}[1h])) or vector(0)",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Cluster errors (1h)",
+      "type": "stat",
+      "id": 103,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "Signed-in senders (submission or JMAP) told that a recipient does not exist here, in the dashboard range. The message is never queued or retried. A few are typos; several at one domain needs a look.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"smtp.mailbox-does-not-exist\" -\"localPort = 25\" | stats count() refused",
+          "queryType": "stats",
+          "refId": "A"
+        }
+      ],
+      "title": "Senders refused: no such mailbox",
+      "type": "stat",
+      "id": 104,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "Permanent failures of mail sent by users (queue remote), in the dashboard range. Our own DMARC and TLS reports are counted separately below.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(delivery.dsn-perm-fail)\" \"queueName = \\\"remote\\\"\" | stats count() failed",
+          "queryType": "stats",
+          "refId": "A"
+        }
+      ],
+      "title": "User mail bounced",
+      "type": "stat",
+      "id": 105,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "User messages rescheduled in the last 24 hours that have not completed since, whatever the dashboard range. Stalwart does not export its queue depth, so this is counted from logs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" (\"(delivery.completed)\" or \"(queue.rescheduled)\") \"queueName = \\\"remote\\\"\" | extract_regexp \"queueId = (?P<qid>[0-9]+)\" | stats by (qid) count() if (\"(queue.rescheduled)\") retries, count() if (\"(delivery.completed)\") done | filter retries:>0 done:0 | stats count() waiting",
+          "queryType": "stats",
+          "refId": "A"
+        }
+      ],
+      "title": "User mail still retrying",
+      "type": "stat",
+      "timeFrom": "24h",
+      "hideTimeOverride": true,
+      "id": 106,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 6,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Share of sign-in attempts that end in auth.failed or auth.error, last hour. Compare it with its own past: expired tokens and clients still sending passwords keep it high.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?auth_(failed|error)(_total)?\"}[1h])) / sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?auth_(success|failed|error)(_total)?\"}[1h]))",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Sign-ins failing",
+      "type": "stat",
+      "id": 107,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 12,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Errors from the data, blob and cache stores (store_*_error), in the dashboard range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?store_[a-z0-9_]*error(_total)?\"}[$__range])) or vector(0)",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Storage errors",
+      "type": "stat",
+      "id": 108,
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "Mail sent by users to other providers (queue remote), per interval.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delivered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rescheduled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bounced"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(delivery.delivered)\" \"queueName = \\\"remote\\\"\" | stats count() n",
+          "queryType": "statsRange",
+          "refId": "A",
+          "legendFormat": "delivered"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(queue.rescheduled)\" \"queueName = \\\"remote\\\"\" | stats count() n",
+          "queryType": "statsRange",
+          "refId": "B",
+          "legendFormat": "rescheduled"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(delivery.dsn-perm-fail)\" \"queueName = \\\"remote\\\"\" | stats count() n",
+          "queryType": "statsRange",
+          "refId": "C",
+          "legendFormat": "bounced"
+        }
+      ],
+      "title": "User mail: outcomes",
+      "type": "timeseries",
+      "interval": "1m",
+      "maxDataPoints": 100,
+      "id": 109,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 7
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "DMARC and TLS reports we send (queue report). Most delivery failures on this server are these, so they are kept apart from user mail.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delivered"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rescheduled"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bounced"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(delivery.delivered)\" \"queueName = \\\"report\\\"\" | stats count() n",
+          "queryType": "statsRange",
+          "refId": "A",
+          "legendFormat": "delivered"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(queue.rescheduled)\" \"queueName = \\\"report\\\"\" | stats count() n",
+          "queryType": "statsRange",
+          "refId": "B",
+          "legendFormat": "rescheduled"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(delivery.dsn-perm-fail)\" \"queueName = \\\"report\\\"\" | stats count() n",
+          "queryType": "statsRange",
+          "refId": "C",
+          "legendFormat": "bounced"
+        }
+      ],
+      "title": "Our reports: outcomes",
+      "type": "timeseries",
+      "interval": "1m",
+      "maxDataPoints": 100,
+      "id": 110,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 7
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Messages stored, by spam verdict, per minute.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "cpm",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ham"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "spam"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?message_ingest_ham(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "ham",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?message_ingest_spam(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "spam",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Inbound accepted",
+      "type": "timeseries",
+      "id": 111,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 7
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "Same events as the stat above. JMAP submissions log no listener, so they show as jmap.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "submissions"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "submission"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "jmap"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "smtp-starttls"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"smtp.mailbox-does-not-exist\" -\"localPort = 25\" | extract_regexp \"listenerId = \\\"(?P<path>[a-z0-9-]+)\\\"\" | format if (path:\"\") \"jmap\" as path | stats by (path) count() n",
+          "queryType": "statsRange",
+          "refId": "A",
+          "legendFormat": "{{path}}"
+        }
+      ],
+      "title": "Senders refused, by path",
+      "type": "timeseries",
+      "interval": "1m",
+      "maxDataPoints": 100,
+      "id": 112,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Rejections per minute, by reason. Port 25 is included, so some of each is background noise.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "cpm",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "no such mailbox"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rate limited"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "relay not allowed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sender not allowed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "not signed in"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_mailbox_does_not_exist(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "no such mailbox",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_rate_limit_exceeded(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "rate limited",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_relay_not_allowed(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "relay not allowed",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_mail_from_unauthorized(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "sender not allowed",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_mail_from_unauthenticated(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "not signed in",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "SMTP refusals, all listeners",
+      "type": "timeseries",
+      "id": 113,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Share of delivery attempts in the last hour that took over 1s, 5s and 60s. Stalwart 0.16 exports non-cumulative histogram buckets, so histogram_quantile is wrong here; recheck after the 1.x upgrade.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "axisSoftMax": 0.1
+          },
+          "unit": "percentunit",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "over 1s"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "over 5s"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "over 60s"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_attempt_time(_milliseconds)?_bucket\",le=~\"5000|10000|60000|300000|600000|1800000|3600000|18000000|[+]?[iI]nf\"}[1h])) / sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_attempt_time(_milliseconds)?_count\"}[1h]))",
+          "instant": false,
+          "legendFormat": "over 1s",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_attempt_time(_milliseconds)?_bucket\",le=~\"10000|60000|300000|600000|1800000|3600000|18000000|[+]?[iI]nf\"}[1h])) / sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_attempt_time(_milliseconds)?_count\"}[1h]))",
+          "instant": false,
+          "legendFormat": "over 5s",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_attempt_time(_milliseconds)?_bucket\",le=~\"300000|600000|1800000|3600000|18000000|[+]?[iI]nf\"}[1h])) / sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_attempt_time(_milliseconds)?_count\"}[1h]))",
+          "instant": false,
+          "legendFormat": "over 60s",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Slow delivery attempts",
+      "type": "timeseries",
+      "id": 114,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Sign-in results per minute, all protocols.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "cpm",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "success"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?auth_success(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "success",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?auth_error(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "error",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?auth_failed(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "failed",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Sign-ins",
+      "type": "timeseries",
+      "id": 115,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 23
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "auth.error events by reason. A new reason or a step change matters more than the level.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Token validation error: JWT validation failed: ExpiredSignature"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unsupported credentials type for OIDC backend"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" \"(auth.error)\" | extract_regexp \"reason = \\\"(?P<reason>[^\\\"]+)\\\"\" | filter reason:* | stats by (reason) count() n",
+          "queryType": "statsRange",
+          "refId": "A",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "title": "Sign-in errors, by reason",
+      "type": "timeseries",
+      "interval": "1m",
+      "maxDataPoints": 100,
+      "id": 116,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 23
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Open connections across pods, on a log scale so the smaller protocols stay visible.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "imap"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "http"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "smtp"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "delivery"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?imap_active_connections(_total)?\"})",
+          "instant": false,
+          "legendFormat": "imap",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?http_active_connections(_total)?\"})",
+          "instant": false,
+          "legendFormat": "http",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_active_connections(_total)?\"})",
+          "instant": false,
+          "legendFormat": "smtp",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?delivery_active_connections(_total)?\"})",
+          "instant": false,
+          "legendFormat": "delivery",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Open connections",
+      "type": "timeseries",
+      "id": 117,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 23
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Working set divided by the memory limit, per pod.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "max by (pod) (container_memory_working_set_bytes{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",container=\"stalwart\"}) / max by (pod) (kube_pod_container_resource_limits{cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",container=\"stalwart\",resource=\"memory\"})",
+          "instant": false,
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Stalwart memory, share of limit",
+      "type": "timeseries",
+      "id": 118,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 31
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "A lopsided split means the load balancer or a restart moved clients to one pod.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum by (pod) ({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?imap_active_connections(_total)?\"})",
+          "instant": false,
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "IMAP connections, by pod",
+      "type": "timeseries",
+      "id": 119,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 31
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "store_*_error counters per interval. Missing-marker warnings are not errors and are left out.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum by (__name__) (increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?store_[a-z0-9_]*error(_total)?\"}[$__rate_interval]) keep_metric_names)",
+          "instant": false,
+          "legendFormat": "{{__name__}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Storage errors, by type",
+      "type": "timeseries",
+      "interval": "1m",
+      "maxDataPoints": 100,
+      "id": 120,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 31
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Per minute: connections from blocked addresses, and failed TLS handshakes.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "cpm",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "blocked address"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TLS handshake failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "new ban"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?security_ip_blocked(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "blocked address",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?tls_handshake_error(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "TLS handshake failed",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?security_(authentication|abuse|scan|loiter)_ban(_total)?\"}[$__rate_interval])) * 60 or vector(0)",
+          "instant": false,
+          "legendFormat": "new ban",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Blocked and failed connections",
+      "type": "timeseries",
+      "id": 121,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 31
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Messages entering the outbound queue per interval, by who wrote them. A jump in user mail can be a compromised account.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "report"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "bounce notice"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "automatic"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_authenticated_message_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "instant": false,
+          "legendFormat": "user",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_report_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "instant": false,
+          "legendFormat": "report",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_dsn_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "instant": false,
+          "legendFormat": "bounce notice",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?queue_autogenerated_queued(_total)?\"}[$__rate_interval])) or vector(0)",
+          "instant": false,
+          "legendFormat": "automatic",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "Outbound queued, by kind",
+      "type": "timeseries",
+      "interval": "1m",
+      "maxDataPoints": 100,
+      "id": 122,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 39
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Share of inbound messages failing SPF, DKIM or DMARC, last hour. All three moving together points at our DNS or resolver, not at senders.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "axisSoftMax": 0.1
+          },
+          "unit": "percentunit",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SPF"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DKIM"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DMARC"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_spf_from_fail(_total)?\"}[1h])) / sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_spf_from_(pass|fail)(_total)?\"}[1h]))",
+          "instant": false,
+          "legendFormat": "SPF",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_dkim_fail(_total)?\"}[1h])) / sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_dkim_(pass|fail)(_total)?\"}[1h]))",
+          "instant": false,
+          "legendFormat": "DKIM",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_dmarc_fail(_total)?\"}[1h])) / sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_dmarc_(pass|fail)(_total)?\"}[1h]))",
+          "instant": false,
+          "legendFormat": "DMARC",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Inbound authentication failures",
+      "type": "timeseries",
+      "id": 123,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 39
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P4169E866C3094E38"
+      },
+      "description": "Connections opened per minute. Many new IMAP connections with few open ones means clients are reconnecting in a loop.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          },
+          "unit": "cpm",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "imap"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "http"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "smtp"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?imap_connection_start(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "imap",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?http_connection_start(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "http",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "P4169E866C3094E38"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({cluster=\"mzla-eks-${env}01\",namespace=\"thundermail\",job=\"stalwart-mgmt\",__name__=~\"(stalwart_)?smtp_connection_start(_total)?\"}[$__rate_interval])) * 60",
+          "instant": false,
+          "legendFormat": "smtp",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "New connections",
+      "type": "timeseries",
+      "id": 124,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 39
+      }
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "PD775F2863313E6C7"
+      },
+      "description": "User mail (queue remote) that bounced, was refused or could not connect, by destination server, in the dashboard range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Events",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "PD775F2863313E6C7"
+          },
+          "editorMode": "code",
+          "expr": "cluster:\"mzla-eks-${env}01\" namespace:\"thundermail\" container:\"stalwart\" (\"(delivery.dsn-perm-fail)\" or \"(delivery.rcpt-to-rejected)\" or \"(delivery.message-rejected)\" or \"(delivery.connect-error)\" or \"(delivery.greeting-failed)\") \"queueName = \\\"remote\\\"\" | extract_regexp \"[(](?P<event>delivery[.][a-z-]+)[)]\" | extract_regexp \"hostname = \\\"(?P<server>[^\\\"]+)\\\"\" | stats by (server, event) count() events | sort by (events desc) limit 20",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "User mail: problem destinations",
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "labels",
+            "format": "json",
+            "replace": true
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "events",
+                "destinationType": "number"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "server": 0,
+              "event": 1,
+              "events": 2
+            },
+            "renameByName": {
+              "server": "Server",
+              "event": "Event",
+              "events": "Events"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "id": 125,
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 47
+      }
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "description": "Firing and pending Grafana rules whose name contains Thundermail, all environments.",
+      "options": {
+        "alertInstanceLabelFilter": "",
+        "alertName": "Thundermail",
+        "dashboardAlerts": false,
+        "folder": null,
+        "groupBy": [],
+        "groupMode": "default",
+        "maxItems": 20,
+        "showInactiveAlerts": false,
+        "sortOrder": 1,
+        "stateFilter": {
+          "error": true,
+          "firing": true,
+          "noData": true,
+          "normal": false,
+          "pending": true
+        },
+        "viewMode": "list"
+      },
+      "title": "Thundermail alerts",
+      "type": "alertlist",
+      "id": 126,
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 14,
+        "y": 47
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
       },
       "id": 14,
       "panels": [],
@@ -125,7 +2854,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 1
+        "y": 57
       },
       "id": 1,
       "options": {
@@ -193,7 +2922,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 1
+        "y": 57
       },
       "id": 2,
       "options": {
@@ -261,7 +2990,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 1
+        "y": 57
       },
       "id": 3,
       "options": {
@@ -329,7 +3058,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 1
+        "y": 57
       },
       "id": 4,
       "options": {
@@ -397,7 +3126,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 1
+        "y": 57
       },
       "id": 5,
       "options": {
@@ -465,7 +3194,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 1
+        "y": 57
       },
       "id": 6,
       "options": {
@@ -552,7 +3281,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 61
       },
       "id": 7,
       "options": {
@@ -711,7 +3440,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 61
       },
       "id": 8,
       "options": {
@@ -848,7 +3577,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 70
       },
       "id": 9,
       "options": {
@@ -946,7 +3675,7 @@
         "h": 6,
         "w": 4,
         "x": 8,
-        "y": 14
+        "y": 70
       },
       "id": 10,
       "options": {
@@ -1014,7 +3743,7 @@
         "h": 6,
         "w": 4,
         "x": 12,
-        "y": 14
+        "y": 70
       },
       "id": 11,
       "options": {
@@ -1082,7 +3811,7 @@
         "h": 6,
         "w": 4,
         "x": 16,
-        "y": 14
+        "y": 70
       },
       "id": 12,
       "options": {
@@ -1150,7 +3879,7 @@
         "h": 6,
         "w": 4,
         "x": 20,
-        "y": 14
+        "y": 70
       },
       "id": 13,
       "options": {
@@ -1191,7 +3920,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 76
       },
       "id": 28,
       "panels": [],
@@ -1228,7 +3957,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 21
+        "y": 77
       },
       "id": 15,
       "options": {
@@ -1291,7 +4020,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 21
+        "y": 77
       },
       "id": 16,
       "options": {
@@ -1354,7 +4083,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 21
+        "y": 77
       },
       "id": 17,
       "options": {
@@ -1421,7 +4150,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 21
+        "y": 77
       },
       "id": 18,
       "options": {
@@ -1484,7 +4213,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 21
+        "y": 77
       },
       "id": 19,
       "options": {
@@ -1551,7 +4280,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 21
+        "y": 77
       },
       "id": 20,
       "options": {
@@ -1618,7 +4347,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 81
       },
       "id": 21,
       "options": {
@@ -1729,7 +4458,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 81
       },
       "id": 22,
       "options": {
@@ -1794,7 +4523,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 33
+        "y": 89
       },
       "id": 23,
       "options": {
@@ -1859,7 +4588,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 33
+        "y": 89
       },
       "id": 24,
       "options": {
@@ -1924,7 +4653,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 33
+        "y": 89
       },
       "id": 25,
       "options": {
@@ -1989,7 +4718,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 97
       },
       "id": 26,
       "options": {
@@ -2054,7 +4783,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 41
+        "y": 97
       },
       "id": 76,
       "options": {
@@ -2121,7 +4850,7 @@
         "h": 4,
         "w": 3,
         "x": 12,
-        "y": 45
+        "y": 101
       },
       "id": 77,
       "options": {
@@ -2164,7 +4893,7 @@
         "h": 8,
         "w": 9,
         "x": 15,
-        "y": 41
+        "y": 97
       },
       "id": 27,
       "options": {
@@ -2198,7 +4927,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 105
       },
       "id": 40,
       "panels": [],
@@ -2238,7 +4967,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 50
+        "y": 106
       },
       "id": 29,
       "options": {
@@ -2307,7 +5036,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 50
+        "y": 106
       },
       "id": 30,
       "options": {
@@ -2369,7 +5098,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 50
+        "y": 106
       },
       "id": 31,
       "options": {
@@ -2430,7 +5159,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 50
+        "y": 106
       },
       "id": 32,
       "options": {
@@ -2499,7 +5228,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 50
+        "y": 106
       },
       "id": 33,
       "options": {
@@ -2569,7 +5298,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 50
+        "y": 106
       },
       "id": 34,
       "options": {
@@ -2668,7 +5397,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 54
+        "y": 110
       },
       "id": 35,
       "options": {
@@ -2733,7 +5462,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 54
+        "y": 110
       },
       "id": 36,
       "options": {
@@ -2798,7 +5527,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 54
+        "y": 110
       },
       "id": 37,
       "options": {
@@ -2864,7 +5593,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 62
+        "y": 118
       },
       "id": 38,
       "options": {
@@ -2905,7 +5634,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 62
+        "y": 118
       },
       "id": 39,
       "options": {
@@ -2939,7 +5668,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 126
       },
       "id": 50,
       "panels": [],
@@ -2980,7 +5709,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 71
+        "y": 127
       },
       "id": 41,
       "options": {
@@ -3043,7 +5772,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 71
+        "y": 127
       },
       "id": 42,
       "options": {
@@ -3110,7 +5839,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 71
+        "y": 127
       },
       "id": 43,
       "options": {
@@ -3177,7 +5906,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 71
+        "y": 127
       },
       "id": 44,
       "options": {
@@ -3244,7 +5973,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 71
+        "y": 127
       },
       "id": 45,
       "options": {
@@ -3307,7 +6036,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 71
+        "y": 127
       },
       "id": 46,
       "options": {
@@ -3405,7 +6134,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 75
+        "y": 131
       },
       "id": 47,
       "options": {
@@ -3470,7 +6199,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 75
+        "y": 131
       },
       "id": 48,
       "options": {
@@ -3511,7 +6240,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 139
       },
       "id": 49,
       "options": {
@@ -3545,7 +6274,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 91
+        "y": 147
       },
       "id": 56,
       "panels": [],
@@ -3600,7 +6329,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 92
+        "y": 148
       },
       "id": 51,
       "options": {
@@ -3669,7 +6398,7 @@
         "h": 5,
         "w": 6,
         "x": 12,
-        "y": 92
+        "y": 148
       },
       "id": 52,
       "options": {
@@ -3742,7 +6471,7 @@
         "h": 5,
         "w": 6,
         "x": 18,
-        "y": 92
+        "y": 148
       },
       "id": 53,
       "options": {
@@ -3811,7 +6540,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 97
+        "y": 153
       },
       "id": 54,
       "options": {
@@ -3877,7 +6606,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 97
+        "y": 153
       },
       "id": 55,
       "options": {
@@ -3915,7 +6644,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 160
       },
       "id": 63,
       "panels": [],
@@ -3955,7 +6684,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 105
+        "y": 161
       },
       "id": 57,
       "options": {
@@ -4020,7 +6749,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 105
+        "y": 161
       },
       "id": 58,
       "options": {
@@ -4085,7 +6814,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 105
+        "y": 161
       },
       "id": 59,
       "options": {
@@ -4150,7 +6879,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 113
+        "y": 169
       },
       "id": 60,
       "options": {
@@ -4227,7 +6956,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 113
+        "y": 169
       },
       "id": 61,
       "options": {
@@ -4292,7 +7021,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 113
+        "y": 169
       },
       "id": 62,
       "options": {
@@ -4330,7 +7059,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 120
+        "y": 176
       },
       "id": 69,
       "panels": [
@@ -4367,7 +7096,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 121
+            "y": 177
           },
           "id": 64,
           "options": {
@@ -4443,7 +7172,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 121
+            "y": 177
           },
           "id": 65,
           "options": {
@@ -4519,7 +7248,7 @@
             "h": 8,
             "w": 8,
             "x": 0,
-            "y": 129
+            "y": 185
           },
           "id": 66,
           "options": {
@@ -4594,7 +7323,7 @@
             "h": 8,
             "w": 8,
             "x": 8,
-            "y": 129
+            "y": 185
           },
           "id": 67,
           "options": {
@@ -4669,7 +7398,7 @@
             "h": 8,
             "w": 8,
             "x": 16,
-            "y": 129
+            "y": 185
           },
           "id": 68,
           "options": {
@@ -4765,7 +7494,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 137
+        "y": 193
       },
       "id": 75,
       "panels": [
@@ -4779,7 +7508,7 @@
             "h": 14,
             "w": 8,
             "x": 0,
-            "y": 138
+            "y": 194
           },
           "id": 70,
           "options": {
@@ -4817,7 +7546,7 @@
             "h": 14,
             "w": 8,
             "x": 8,
-            "y": 138
+            "y": 194
           },
           "id": 71,
           "options": {
@@ -4855,7 +7584,7 @@
             "h": 14,
             "w": 8,
             "x": 16,
-            "y": 138
+            "y": 194
           },
           "id": 72,
           "options": {
@@ -4893,7 +7622,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 152
+            "y": 208
           },
           "id": 73,
           "options": {
@@ -4931,7 +7660,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 152
+            "y": 208
           },
           "id": 74,
           "options": {
@@ -4971,15 +7700,14 @@
     "stalwart",
     "keycloak",
     "accounts",
-    "cutover",
-    "migration"
+    "operations"
   ],
   "templating": {
     "list": [
       {
         "current": {
-          "text": "tb-stage",
-          "value": "tb-stage"
+          "text": "tb-prod",
+          "value": "tb-prod"
         },
         "description": "Selects cluster mzla-eks-<env>01, the <env>-* Argo apps, the Kargo stages and the log stream.",
         "hide": 0,
@@ -4990,22 +7718,22 @@
         "options": [
           {
             "selected": true,
-            "text": "tb-stage",
-            "value": "tb-stage"
+            "text": "tb-prod",
+            "value": "tb-prod"
           },
           {
             "selected": false,
-            "text": "tb-prod",
-            "value": "tb-prod"
+            "text": "tb-stage",
+            "value": "tb-stage"
           }
         ],
-        "query": "tb-stage,tb-prod",
+        "query": "tb-prod,tb-stage",
         "type": "custom"
       },
       {
         "current": {
-          "text": "stage",
-          "value": "stage-thundermail[.]com"
+          "text": "prod",
+          "value": "mail[.]thundermail[.]com|tb[.]pro"
         },
         "description": "Instance regex for the blackbox probe panels. Prod hostnames are a best guess until the prod probes exist.",
         "hide": 0,
@@ -5016,16 +7744,16 @@
         "options": [
           {
             "selected": true,
-            "text": "stage",
-            "value": "stage-thundermail[.]com"
+            "text": "prod",
+            "value": "mail[.]thundermail[.]com|tb[.]pro"
           },
           {
             "selected": false,
-            "text": "prod",
-            "value": "mail[.]thundermail[.]com|tb[.]pro"
+            "text": "stage",
+            "value": "stage-thundermail[.]com"
           }
         ],
-        "query": "stage : stage-thundermail[.]com, prod : mail[.]thundermail[.]com|tb[.]pro",
+        "query": "prod : mail[.]thundermail[.]com|tb[.]pro, stage : stage-thundermail[.]com",
         "type": "custom"
       },
       {
@@ -5044,21 +7772,21 @@
       },
       {
         "current": {
-          "text": "net/stalwart-nginx-thundermail/612e25cfceb90999",
-          "value": "net/stalwart-nginx-thundermail/612e25cfceb90999"
+          "text": "net/stalwart-nginx/715c3b20bf575eb3",
+          "value": "net/stalwart-nginx/715c3b20bf575eb3"
         },
-        "description": "LoadBalancer dimension of the stalwart-nginx-thundermail NLB (tfvars thundermail_stage_nlb_arn_suffix). Replace for prod.",
+        "description": "LoadBalancer dimension of the nginx NLB, tb-prod by default. For tb-stage paste thundermail_stage_nlb_arn_suffix from terraform.tfvars.",
         "hide": 0,
         "label": "NLB (ARN suffix)",
         "name": "nlb",
         "options": [
           {
             "selected": true,
-            "text": "net/stalwart-nginx-thundermail/612e25cfceb90999",
-            "value": "net/stalwart-nginx-thundermail/612e25cfceb90999"
+            "text": "net/stalwart-nginx/715c3b20bf575eb3",
+            "value": "net/stalwart-nginx/715c3b20bf575eb3"
           }
         ],
-        "query": "net/stalwart-nginx-thundermail/612e25cfceb90999",
+        "query": "net/stalwart-nginx/715c3b20bf575eb3",
         "type": "textbox"
       }
     ]
@@ -5069,6 +7797,6 @@
   },
   "timepicker": {},
   "timezone": "utc",
-  "title": "Thundermail / Cutover: Accounts, Keycloak, Stalwart",
+  "title": "Thundermail / Operations: Accounts, Keycloak, Stalwart",
   "uid": "thundermail-migration-cutover"
 }

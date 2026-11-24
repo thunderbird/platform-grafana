@@ -33,16 +33,18 @@ locals {
       detail    = "Over the last 6 hours Stalwart on tb-prod answered 'Mailbox does not exist' to signed-in senders (SMTP submission or JMAP) at least 3 times for recipients at {{ $labels.rcpt_domain }}. The message is never queued or retried. Check how {{ $labels.rcpt_domain }} is configured on each Stalwart pod directly, not through the load balancer; the linked issue has the steps. Mistyped recipients at a hosted domain can also trigger this."
     }
     ThundermailProdClusterCoordinatorNotRunning = {
-      # Pods that logged in the last 10m and logged server.startup, but never cluster.subscriber-start.
-      # 29d because VictoriaLogs keeps 30d. A pod older than that matches neither list: no alert.
+      # Pods that logged in the last 10m whose latest server.startup has no cluster.startup after it.
+      # Latest, not any: a container restart keeps the pod name. The two lines come from the same
+      # thread at boot, in this order. 29d because VictoriaLogs keeps 30d. A pod whose startup is older
+      # than that does not alert.
       expr      = <<-EOT
-        _time:10m ${local.thundermail_prod_logs} pod:in(_time:29d ${local.thundermail_prod_logs} "server.startup" | fields pod) -pod:in(_time:29d ${local.thundermail_prod_logs} "cluster.subscriber-start" | fields pod) | stats by (pod) count() log_lines
+        _time:29d ${local.thundermail_prod_logs} pod:in(_time:10m ${local.thundermail_prod_logs} | fields pod) ("(server.startup)" or "(cluster.startup)") | stats by (pod) max(_time) if ("(server.startup)") started, max(_time) if ("(cluster.startup)") clustered | filter started:* (clustered:"" or clustered:lt_field(started)) | stats by (pod) count() stale_boots
       EOT
       window    = 2505600
       threshold = 0
       for       = "15m"
       summary   = "Stalwart pod {{ $labels.pod }} is running without the cluster coordinator"
-      detail    = "Pod {{ $labels.pod }} on tb-prod started but never logged cluster.subscriber-start. It does not receive directory changes made through another pod, so aliases, domains and accounts can differ between pods. The coordinator only starts at boot: check the Coordinator setting, then restart the pods one at a time and look for cluster.startup, cluster.publisher-start and cluster.subscriber-start in each startup log."
+      detail    = "Pod {{ $labels.pod }} on tb-prod did not log cluster.startup at its last start. It does not receive directory changes made through another pod, so aliases, domains and accounts can differ between pods. The coordinator only starts at boot: check the Coordinator setting, then restart the pods one at a time and look for cluster.startup, cluster.publisher-start and cluster.subscriber-start in each startup log."
     }
   }
 
